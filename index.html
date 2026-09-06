@@ -248,6 +248,30 @@ html{scroll-behavior:smooth}
  .homeTop .homeNav{min-width:0;max-width:100%}
 }
 
+
+/* V50 Premium Auth UI — visual enhancement only */
+.auth{position:relative}
+.auth:before{content:"";position:absolute;inset:-1px;border-radius:24px;padding:1px;background:linear-gradient(135deg,rgba(23,105,224,.24),rgba(9,167,215,.10),rgba(124,58,237,.16));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.auth.card{border-radius:24px;box-shadow:0 28px 80px rgba(28,58,94,.14),0 6px 18px rgba(28,58,94,.07)}
+.authPanel{box-shadow:0 10px 28px rgba(28,58,94,.07),inset 0 1px 0 rgba(255,255,255,.72)}
+.authPanel[style*="239,247,255"]{background:linear-gradient(145deg,rgba(244,249,255,.96),rgba(232,242,255,.82))!important}
+.authPanel[style*="239,249,242"]{background:linear-gradient(145deg,rgba(246,253,248,.96),rgba(231,248,238,.82))!important}
+.howBtn,.btn{box-shadow:0 5px 12px rgba(28,58,94,.08),inset 0 1px 0 rgba(255,255,255,.75);transition:transform .16s ease,box-shadow .16s ease,filter .16s ease}
+.btn.primary{box-shadow:0 9px 22px rgba(23,105,224,.24),inset 0 1px 0 rgba(255,255,255,.28),inset 0 -2px 0 rgba(0,0,0,.10)}
+.btn:hover,.howBtn:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(28,58,94,.13),inset 0 1px 0 rgba(255,255,255,.82)}
+.btn.primary:hover{filter:saturate(1.06) brightness(1.02);box-shadow:0 13px 28px rgba(23,105,224,.28),inset 0 1px 0 rgba(255,255,255,.28),inset 0 -2px 0 rgba(0,0,0,.10)}
+.btn:active,.howBtn:active{transform:translateY(1px) scale(.99);box-shadow:0 4px 10px rgba(28,58,94,.10),inset 0 2px 3px rgba(0,0,0,.08)}
+.google{box-shadow:0 7px 18px rgba(28,58,94,.09),inset 0 1px 0 #fff}
+.field input,.field select{box-shadow:inset 0 2px 5px rgba(28,58,94,.045),0 1px 0 rgba(255,255,255,.8);transition:border-color .16s ease,box-shadow .16s ease}
+.field input:focus,.field select:focus{border-color:#73aaf0;box-shadow:0 0 0 4px rgba(23,105,224,.10),inset 0 2px 5px rgba(28,58,94,.04)}
+.authStep{box-shadow:0 5px 13px rgba(28,58,94,.055),inset 0 1px 0 rgba(255,255,255,.72)}
+.stepNo{box-shadow:0 5px 12px rgba(23,105,224,.20),inset 0 1px 0 rgba(255,255,255,.25)}
+.demoCard{box-shadow:0 10px 24px rgba(91,33,182,.08),inset 0 1px 0 rgba(255,255,255,.72)}
+.authFooter{grid-template-columns:1fr 1fr;background:rgba(207,220,237,.62);box-shadow:0 7px 18px rgba(28,58,94,.07)}
+.authFooter a{background:rgba(255,255,255,.88);transition:background .15s ease,transform .15s ease}
+.authFooter a:hover{background:#fff;transform:translateY(-1px)}
+@media(max-width:760px){.auth{border-radius:20px}.authHead{gap:10px}.authHow .howBtn{padding:8px 10px;font-size:11px}.howQ{width:27px;height:27px}.authFooter{grid-template-columns:1fr 1fr}.authFooter a{font-size:12px;padding:12px 7px}}
+
 </style>
 <script>window.MathJax={tex:{inlineMath:[["\\(","\\)"]],displayMath:[["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
 <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
@@ -520,7 +544,7 @@ function login(){
     <h2 style="margin-bottom:8px">Setup Steps</h2>
     <div class="authSteps"><div class="authStep"><span class="stepNo">1</span><div><b>Continue with Google</b><div class="small muted">Verify your Google account first.</div></div></div><div class="authStep"><span class="stepNo">2</span><div><b>Create your account details</b><div class="small muted">Enter Full Name, User ID and PIN.</div></div></div><div class="authStep"><span class="stepNo">3</span><div><b>Start Practicing</b><div class="small muted">Your account is ready after setup.</div></div></div></div>
    </section></div>
-   <div class="authFooter"><button class="linkBtn" id="howWorksBtn2" type="button">How It Works</button><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
+   <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
    </section></main>`;
  }
  if(googlePin){
@@ -533,7 +557,7 @@ function login(){
     <button class="btn primary" id="login" style="width:100%">Sign In</button>
     <p class="small muted authNote">Your User ID is verified from your account. You only need to enter your PIN.</p>
    </section>
-   <div class="authFooter"><button class="linkBtn" id="howWorksBtn2" type="button">How It Works</button><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
+   <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
    </section></main>`;
  }
  return `<main class="login"><section class="card glass auth">
@@ -553,7 +577,7 @@ function login(){
  <p class="small muted demoNote">Try Set 1 and its allowed revisions, scheduling, marks and analytics. Other areas remain locked.</p>
  <button class="btn demoBtn" id="demoCreate" type="button">Create Free Demo Account</button>
  <p class="small muted" style="margin-bottom:0">Maximum <b>20 active demo users</b> at a time · maximum 2 logins per demo.</p></section>
- <div class="authFooter"><button class="linkBtn" id="howWorksBtn2" type="button">How It Works</button><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
+ <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
  </section></main>`;
 }
 
@@ -820,7 +844,7 @@ return sectionHeader("Profile","Account, progress backup and local-data controls
 <div class="profileLine"><span>User ID</span><b>${escapeHtml(S.user)}</b></div>
 <div class="profileLine"><span>Authentication</span><b id="authMethodLabel">Checking…</b></div>
 <div class="profileLine"><span>Google Authentication</span><b id="googleLinkLabel">Checking…</b></div>
-<div class="notice small" style="margin-top:15px"><b>Google Account Linking</b><br>Google only authenticates you. SSC Archives does not receive or store your Google password. Your verified Google email and basic profile information are used only for authentication and account linking. Linking requires your explicit confirmation.</div>
+<div class="notice small" style="margin-top:15px"><b>Google Account Linking</b><br>Google only authenticates you. SSC Archives does not receive or store your Google password. SSC Archives uses the verified Google account email for authentication and account matching. Your Full Name is entered by you during account setup; it is not taken from your Google profile. Linking requires your explicit confirmation.</div>
 <div class="row" style="margin-top:12px"><button class="btn" id="linkGoogle">Link Google Account</button><button class="btn" id="profileHowTo">How to Use This Test</button></div>
 <div class="notice small" style="margin-top:15px"><b>Progress Backup</b><br>Create a backup file so your progress can be restored if browser storage is cleared. Backup and Restore are available from this profile.</div>
 <div class="row" style="margin-top:15px"><button class="btn primary" id="backupProgress">Create Backup</button><button class="btn" id="restoreProgress">Restore Backup</button><input id="restoreFile" type="file" accept="application/json,.json" class="hidden"></div>
@@ -828,7 +852,7 @@ return sectionHeader("Profile","Account, progress backup and local-data controls
 <div class="notice due small" style="margin-top:15px"><b>Delete Profile</b><br>Currently removes the profile and saved local data from this browser. Profile deletion currently removes this browser's saved profile and data.</div>
 <div class="row" style="margin-top:15px"><button class="btn danger" id="deleteProfile">Delete Profile & Local Data</button><button class="btn" id="signout">Sign Out</button></div>
 <div class="notice small" style="margin-top:18px"><b>Disclaimer</b><br>SSC Archives is a production-integration build. The questions are SSC previous-year questions (PYQs) and are not original content created by this platform. Question statements, formatting, syntax, solutions, explanations, translations, or answer data may contain errors or inaccuracies. This build may contain bugs, security issues, or other technical problems. Use it for testing and educational practice only.</div>
-<div class="small muted" style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">© 2026 SSC Archives.</div>
+<div class="small muted" style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">SSC Archives · Version 0.4.0 · © 2026 SSC Archives. All rights reserved.</div>
 </section></main>`;
 }
 function paletteClass(i){
@@ -1289,7 +1313,7 @@ $("google")?.addEventListener("click",async()=>{
  try{
    const session=(await supabaseClient.auth.getSession()).data.session;
    if(session?.user?.id) await supabaseClient.auth.signOut();
-   const {error}=await supabaseClient.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname}});
+   const {error}=await supabaseClient.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname,scopes:"openid email"}});
    if(error)throw error;
  }catch(e){console.error(e);alert("Google authentication failed: "+(e?.message||"Please try again."));}
 });
@@ -1541,7 +1565,7 @@ async function boot(){
         return render(login());
       }
       S.googleOnboarding=true;S.googlePinLogin=false;S.authMode="signup";
-      S.user="";S.name=String(session.user.user_metadata?.full_name||session.user.user_metadata?.name||"").slice(0,80);
+      S.user="";S.name="";
       S.pin="";S.authUid=session.user.id;S.accountType="google";S.googleEmail=String(session.user.email||"");
       return render(login());
     }
