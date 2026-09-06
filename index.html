@@ -562,19 +562,6 @@ function howItWorksModal(){
 
 function login(){
  const a=account();
- if(a?.accountType==='demo'){
-  return `<main class="login"><section class="card glass auth">
-  <div class="authHead"><div><div class="authBrand">SSC ARCHIVES · MATHS (GEOMETRY)</div><h1>Demo Account</h1><p class="muted">Demo access is completely separate from Google authentication.</p></div><div class="authHow"><button class="howBtn" id="howWorksBtn" type="button"><span class="howQ">?</span><span>How It Works</span></button></div></div>
-  <section class="authPanel" style="margin-top:16px;background:rgba(249,245,255,.82);border:1px solid #c9b3f5">
-   <div class="notice small"><b>Demo User</b><br>No Google verification, Google account linking, or Google recovery is used for Demo accounts.</div>
-   <div class="field"><label>Demo User ID</label><input id="uid" value="${escapeHtml(a?.user||'')}" readonly autocomplete="username"></div>
-   <div class="field"><label>Demo PIN</label><input id="pin" inputmode="numeric" maxlength="6" placeholder="Enter your 6-digit PIN" autocomplete="current-password"></div>
-   <button class="btn primary" id="login" style="width:100%">Enter Demo</button>
-   <p class="small muted authNote">This Demo account is one-time use. After its session ends, it cannot be logged in again.</p>
-  </section>
-  <div class="authFooter"><button class="btn" id="demoExit" type="button">Back to Account Selection</button><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
-  </section></main>`;
- }
  const googleStep=!!S.googleOnboarding;
  const googlePin=!!S.googlePinLogin;
  const hasSaved=!!a;
@@ -1380,12 +1367,6 @@ $("cancelGoogleSignup")?.addEventListener("click",async()=>{
   render(login());
 });
 
-$("demoExit")?.addEventListener("click",async()=>{
- localStorage.removeItem(KEY); localStorage.removeItem(DATA_KEY); clearLastView();
- try{await supabaseClient.auth.signOut()}catch(e){}
- S={screen:"login",user:"",name:"",pin:"",set:1,q:0,ans:blankArr(),mark:blankBool(),date:"",seconds:900,deadline:0,phase:"first",bookmarkMode:false,bookmarkItems:[],state:blankState(),paletteVisible:true,autoSubmitting:false,submitBusy:false,pauseBusy:false,qTimes:blankArr().map(()=>0),qStartAt:0,authMode:"signin",googleOnboarding:false,googlePinLogin:false,googleEmail:"",accountType:"pin"};
- render(login());
-});
 $("login")?.addEventListener("click",async()=>{
  let u=$("uid").value.trim().toUpperCase(),p=$("pin").value.trim(),a=account();
  if(!/^[A-Za-z0-9_-]{4,30}$/.test(u))return alert("User ID: use 4–30 letters, numbers, _ or -.");
@@ -1398,21 +1379,26 @@ $("login")?.addEventListener("click",async()=>{
       a?.accountType==="demo" ||
       /^DEMO-USER-\d+$/i.test(u)
     ){
-      const {error:demoAuthError}=await supabaseClient.auth.signInWithPassword({
-        email:cred.email,
-        password:cred.password
-      });
-      if(demoAuthError)throw new Error("Invalid Demo PIN.");
+      // Demo is completely separate from Google.
+      // Backend one-time state is checked first.
       const result=await rpc("ssc_demo_login",{
         p_demo_code:u,
         p_pin_hash:await sha256Hex(p)
       });
       if(result?.status!=="active"){
-        await supabaseClient.auth.signOut();
-        throw new Error("This Demo account has already been used or has expired.");
+        throw new Error(
+          result?.status==="expired"
+            ? "This Demo account has already been used or has expired."
+            : "Invalid Demo User ID or PIN."
+        );
       }
+      const {error:demoAuthError}=await supabaseClient.auth.signInWithPassword({
+        email:cred.email,
+        password:cred.password
+      });
+      if(demoAuthError)throw new Error("Demo authentication failed.");
       S.accountType="demo";
-   }else if(!S.googlePinLogin){
+    }else if(!S.googlePinLogin){
      const loginEmail=await rpc("ssc_get_login_email",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
      if(!loginEmail){
        sessionStorage.setItem("SSC_PIN_BOOTSTRAP_PENDING",JSON.stringify({userCode:u}));
@@ -1437,7 +1423,13 @@ $("login")?.addEventListener("click",async()=>{
      if(pinCheck?.needs_setup===true) await rpc("ssc_bootstrap_pin",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
    }
    const session=(await supabaseClient.auth.getSession()).data.session;
-   S.authUid=session?.user?.id||null;S.accountType=a?.accountType||"pin";S.googleEmail=a?.googleEmail||S.googleEmail||"";S.googlePinLogin=false;
+   S.authUid=session?.user?.id||null;
+    S.accountType=(
+      a?.accountType==="demo" ||
+      /^DEMO-USER-\\d+$/i.test(u)
+    ) ? "demo" : (a?.accountType||"pin");
+    S.googleEmail=a?.googleEmail||S.googleEmail||"";
+    S.googlePinLogin=false;
  }catch(e){
    console.error(e);S.pin="";
    return alert("Authentication failed: "+(e?.message||"Please check your User ID and PIN."));
@@ -1478,13 +1470,7 @@ $("linkGoogle")?.addEventListener("click",async()=>{
     if(error)throw error;
   }catch(e){console.error(e);alert("Google linking failed: "+(e?.message||"Please try again."));}
 });
-$("signout")?.addEventListener("click",async()=>{
- localStorage.setItem(LOGOUT_KEY,"1");clearLastView();
- const wasDemo=isDemoAccount(),demoCode=S.user;
- if(wasDemo&&demoCode){try{await rpc("ssc_end_demo_session",{p_demo_code:demoCode});}catch(e){console.warn("Demo session end failed:",e)}}
- try{await supabaseClient.auth.signOut()}catch(e){console.warn(e)}
- S.unlocked=false;S.pin="";S.user="";S.name="";S.googleOnboarding=false;S.googlePinLogin=false;S.screen="login";S.authMode="signin";render(login())
-});
+$("signout")?.addEventListener("click",async()=>{localStorage.setItem(LOGOUT_KEY,"1");clearLastView();try{await supabaseClient.auth.signOut()}catch(e){console.warn(e)}S.unlocked=false;S.pin="";S.user="";S.name="";S.googleOnboarding=false;S.googlePinLogin=false;S.screen="login";S.authMode="signin";render(login())});
 $("backupProgress")?.addEventListener("click",()=>{
  const payload={version:2,exportedAt:new Date().toISOString(),account:{user:S.user,name:S.name||""},data:D};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -1711,12 +1697,6 @@ async function boot(){
     }
     let saved=account();
     const oauthCallback=/(^|[#?&])(access_token|refresh_token|code)=/.test(window.location.hash+window.location.search) || localStorage.getItem("SSC_GOOGLE_OAUTH_PENDING")==="1";
-    if(saved?.accountType==='demo'&&oauthCallback){
-      localStorage.removeItem("SSC_GOOGLE_OAUTH_PENDING");
-      try{await supabaseClient.auth.signOut()}catch(e){}
-      S.user=saved.user||"";S.name=saved.name||"";S.authUid=null;S.accountType="demo";S.googleEmail="";S.googleOnboarding=false;S.googlePinLogin=false;S.authMode="signin";
-      return render(login());
-    }
     const recoveryPendingRaw=localStorage.getItem("SSC_RECOVERY_PENDING");
     const pinBootstrapPendingRaw=sessionStorage.getItem("SSC_PIN_BOOTSTRAP_PENDING");
     if(session && oauthCallback && pinBootstrapPendingRaw && (session.user.app_metadata?.provider==="google" || session.user.identities?.some(i=>i.provider==="google"))){
