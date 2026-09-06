@@ -551,7 +551,7 @@ function howItWorksModal(){
  <p><b>Already registered:</b> After Google verification, SSC Archives matches your Google identity with your existing account. Your registered <b>User ID is brought automatically</b>; you only enter your PIN. You do not create the account again.</p>
  <p><b>Normal next login:</b> When the account session is already active, the Google button and setup screens are not shown. You use your registered User ID and PIN.</p>
  <p><b>When Google may be shown again:</b> first login, a long gap with an expired session, a refreshed/expired session, a cleared browser, or a new browser/device where the saved account session is unavailable.</p>
- <p><b>Free Demo:</b> The server creates a unique Demo User ID and temporary 6-digit PIN. Up to 20 demo accounts are active at one time and each demo allows one login only.</p>
+ <p><b>Demo User:</b> The server creates a unique Demo User ID and temporary 6-digit PIN. Up to 20 demo accounts are active at one time and each demo allows one login only.</p>
  <p><b>Data & tests:</b> Account identity, progress, bookmarks and test data are handled through the enabled SSC Archives/Supabase setup. Each test has 25 questions and a 15-minute timer.</p>
  </div>
  <button class="btn primary" id="closeHowWorks2" style="width:100%;margin-top:12px">Close</button>
@@ -613,9 +613,9 @@ function login(){
    <h2>Sign In (Existing Users)</h2><p class="small muted">Your registered User ID is used with your PIN.</p>
    ${hasSaved?`<div class="field"><label>User ID</label><input id="uid" value="${escapeHtml(a?.user||"")}" readonly autocomplete="username"></div><div class="field"><label>PIN</label><input id="pin" inputmode="numeric" maxlength="6" placeholder="Enter your PIN" autocomplete="current-password"></div><button class="btn primary" id="login" style="width:100%">Sign In</button><p class="small muted authNote">Once registered, setup screens disappear. Your account User ID stays linked to your login.</p><button class="btn recoveryBtn" id="forgotAccessBtn" type="button">Forgot User ID / PIN?</button>`:`<div class="notice small">After Google verification, SSC Archives will either open account setup for a new user or automatically show the existing User ID and ask only for the PIN.</div><button class="btn recoveryBtn" id="forgotAccessBtn" type="button">Forgot User ID / PIN?</button>`}
  </section></div>
- <section class="demoCard"><div class="demoHead"><div><b>FREE DEMO USER</b><div class="small muted">No Google or email required.</div></div><span id="demoStatus" class="demoStatus">Total Demo Registrations: Checking…</span></div>
+ <section class="demoCard"><div class="demoHead"><div><b>FOR DEMO USER</b><div class="small muted">No Google or email required.</div></div><span id="demoStatus" class="demoStatus">Total Demo Registrations: Checking…</span></div>
  <p class="small muted demoNote">Try Set 1 and its allowed revisions, scheduling, marks and analytics. Other areas remain locked.</p>
- <button class="btn demoBtn" id="demoCreate" type="button">Create Free Demo Account</button>
+ <button class="btn demoBtn" id="demoCreate" type="button">Create Demo Account</button>
  <p class="small muted" style="margin:8px 0 0"><b>Live Demo Slots: 20</b></p></section>
  <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
  </section></main>`;
@@ -1312,7 +1312,7 @@ $("demoCreate")?.addEventListener("click",async()=>{
       console.error("Demo creation failed:",e);
       alert("Demo account could not be created: "+(e?.message||"Please try again."));
       await refreshAuthCapacity();
-    }finally{b.disabled=false;b.textContent="Create Free Demo Account";}
+    }finally{b.disabled=false;b.textContent="Create Demo Account";}
   };
   try{
     if(navigator.locks?.request){
@@ -1322,7 +1322,7 @@ $("demoCreate")?.addEventListener("click",async()=>{
     }
   }catch(e){
     console.error("Demo browser lock failed:",e);
-    b.disabled=false;b.textContent="Create Free Demo Account";
+    b.disabled=false;b.textContent="Create Demo Account";
   }
 });
 
@@ -1375,7 +1375,12 @@ $("login")?.addEventListener("click",async()=>{
  S.user=u;S.name=a?.name||u;S.pin=p;
  try{
    const cred=await authCredentialFor(u,p);
-   if(!S.googlePinLogin){
+   if(a?.accountType==="demo"){
+     const {error:demoAuthError}=await supabaseClient.auth.signInWithPassword({email:cred.email,password:cred.password});
+     if(demoAuthError)throw demoAuthError;
+     const result=await rpc("ssc_demo_login",{p_demo_code:u,p_pin_hash:await sha256Hex(p)});
+     if(result?.status!=="active")throw new Error("Demo account is not available for another login.");
+   }else if(!S.googlePinLogin){
      const loginEmail=await rpc("ssc_get_login_email",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
      if(!loginEmail){
        sessionStorage.setItem("SSC_PIN_BOOTSTRAP_PENDING",JSON.stringify({userCode:u}));
@@ -1398,10 +1403,6 @@ $("login")?.addEventListener("click",async()=>{
      const {error:pinAuthError}=await supabaseClient.auth.updateUser({password:cred.password});
      if(pinAuthError)throw new Error("PIN login setup failed: "+pinAuthError.message);
      if(pinCheck?.needs_setup===true) await rpc("ssc_bootstrap_pin",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
-   }
-   if(a?.accountType==="demo"){
-     const result=await rpc("ssc_demo_login",{p_demo_code:u,p_pin_hash:await sha256Hex(p)});
-     if(result?.status!=="active")throw new Error("Demo account is expired.");
    }
    const session=(await supabaseClient.auth.getSession()).data.session;
    S.authUid=session?.user?.id||null;S.accountType=a?.accountType||"pin";S.googleEmail=a?.googleEmail||S.googleEmail||"";S.googlePinLogin=false;
