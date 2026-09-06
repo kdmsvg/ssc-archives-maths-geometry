@@ -1283,37 +1283,49 @@ $("profileHowTo")?.addEventListener("click",()=>showHowTo(true));
 $("demoCreate")?.addEventListener("click",async()=>{
   const b=$("demoCreate"); if(!b)return;
   b.disabled=true;b.textContent="Creating…";
+  const createDemo=async()=>{
+    try{
+      const cap=await rpc("ssc_account_capacity");
+      if(!cap?.demo_available) throw new Error("All 20 demo slots are currently occupied.");
+      let browserToken=localStorage.getItem("SSC_DEMO_BROWSER_TOKEN");
+      if(!browserToken){
+        browserToken=(crypto?.randomUUID?crypto.randomUUID():("demo-"+Date.now()+"-"+Math.random().toString(36).slice(2)));
+        localStorage.setItem("SSC_DEMO_BROWSER_TOKEN",browserToken);
+      }
+      const d=await rpc("ssc_create_demo_account",{p_browser_token:browserToken});
+      if(!d?.available){
+        if(d?.reason==="BROWSER_ALREADY_HAS_DEMO") throw new Error("This browser already has an active Demo Account.");
+        throw new Error("Demo availability changed. Please try again.");
+      }
+      const code=String(d.demo_code||"").toUpperCase(), pin=String(d.demo_pin||"");
+      if(!code||!/^[\d]{6}$/.test(pin)) throw new Error("The demo account could not be generated safely.");
+      const cred=await authCredentialFor(code,pin);
+      const {data,error}=await supabaseClient.auth.signUp({email:cred.email,password:cred.password});
+      if(error)throw error;
+      if(!data.session)throw new Error("Demo authentication confirmation is not enabled. Please contact the administrator.");
+      const pinHash=await sha256Hex(pin);
+      const claimed=await rpc("ssc_claim_demo",{p_demo_code:code,p_pin_hash:pinHash});
+      if(claimed?.status!=="active")throw new Error("Demo account claim failed.");
+      S.user=code;S.name=code;S.pin=pin;S.accountType="demo";S.authUid=data.user?.id||null;S.googleEmail="";
+      saveAccount();localStorage.removeItem(LOGOUT_KEY);
+      alert(`Demo account created.\n\nUser ID: ${code}\nPIN: ${pin}\n\nKeep these credentials safe. This demo allows up to 2 logins.`);
+      S.screen="home";showSplash(()=>{render(home());showHowTo()});
+    }catch(e){
+      console.error("Demo creation failed:",e);
+      alert("Demo account could not be created: "+(e?.message||"Please try again."));
+      await refreshAuthCapacity();
+    }finally{b.disabled=false;b.textContent="Create Free Demo Account";}
+  };
   try{
-    const cap=await rpc("ssc_account_capacity");
-    if(!cap?.demo_available) throw new Error("All 20 demo slots are currently occupied.");
-    let browserToken=localStorage.getItem("SSC_DEMO_BROWSER_TOKEN");
-    if(!browserToken){
-      browserToken=(crypto?.randomUUID?crypto.randomUUID():("demo-"+Date.now()+"-"+Math.random().toString(36).slice(2)));
-      localStorage.setItem("SSC_DEMO_BROWSER_TOKEN",browserToken);
+    if(navigator.locks?.request){
+      await navigator.locks.request("SSC_DEMO_CREATION_LOCK",{mode:"exclusive"},createDemo);
+    }else{
+      await createDemo();
     }
-    const d=await rpc("ssc_create_demo_account",{p_browser_token:browserToken});
-    if(!d?.available){
-      if(d?.reason==="BROWSER_ALREADY_HAS_DEMO") throw new Error("This browser already has an active Demo Account.");
-      throw new Error("Demo availability changed. Please try again.");
-    }
-    const code=String(d.demo_code||"").toUpperCase(), pin=String(d.demo_pin||"");
-    if(!code||!/^\d{6}$/.test(pin)) throw new Error("The demo account could not be generated safely.");
-    const cred=await authCredentialFor(code,pin);
-    const {data,error}=await supabaseClient.auth.signUp({email:cred.email,password:cred.password});
-    if(error)throw error;
-    if(!data.session)throw new Error("Demo authentication confirmation is not enabled. Please contact the administrator.");
-    const pinHash=await sha256Hex(pin);
-    const claimed=await rpc("ssc_claim_demo",{p_demo_code:code,p_pin_hash:pinHash});
-    if(claimed?.status!=="active")throw new Error("Demo account claim failed.");
-    S.user=code;S.name=code;S.pin=pin;S.accountType="demo";S.authUid=data.user?.id||null;S.googleEmail="";
-    saveAccount();localStorage.removeItem(LOGOUT_KEY);
-    alert(`Demo account created.\n\nUser ID: ${code}\nPIN: ${pin}\n\nKeep these credentials safe. This demo allows up to 2 logins.`);
-    S.screen="home";showSplash(()=>{render(home());showHowTo()});
   }catch(e){
-    console.error("Demo creation failed:",e);
-    alert("Demo account could not be created: "+(e?.message||"Please try again."));
-    await refreshAuthCapacity();
-  }finally{b.disabled=false;b.textContent="Create Free Demo Account";}
+    console.error("Demo browser lock failed:",e);
+    b.disabled=false;b.textContent="Create Free Demo Account";
+  }
 });
 
 if(!account()&&$("uid")){
