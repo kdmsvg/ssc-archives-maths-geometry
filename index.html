@@ -1656,15 +1656,15 @@ async function boot(){
         const bp=JSON.parse(pinBootstrapPendingRaw);
         const pendingCode=String(bp?.userCode||"").trim().toUpperCase();
         if(!pendingCode)throw new Error("Pending User ID is missing.");
-        const {data:profile}=await supabaseClient.from("ssc_profiles").select("id,user_code,display_name").eq("id",session.user.id).maybeSingle();
-        if(!profile?.id || String(profile.user_code||"").toUpperCase()!==pendingCode){
+        const profile=await rpc("ssc_get_google_bootstrap_profile",{p_user_code:pendingCode});
+        if(!profile?.user_code) {
           sessionStorage.removeItem("SSC_PIN_BOOTSTRAP_PENDING");
           localStorage.removeItem("SSC_GOOGLE_OAUTH_PENDING");
           throw new Error("This Google account is not linked to the requested User ID.");
         }
         sessionStorage.removeItem("SSC_PIN_BOOTSTRAP_PENDING");
         localStorage.removeItem("SSC_GOOGLE_OAUTH_PENDING");
-        S.user=profile.user_code;S.name=profile.display_name||"";S.pin="";S.authUid=session.user.id;S.accountType="google";S.googleEmail=String(session.user.email||"");
+        S.user=String(profile.user_code||pendingCode).toUpperCase();S.name=profile.display_name||"";S.pin="";S.authUid=session.user.id;S.accountType="google";S.googleEmail=String(session.user.email||"");
         saveAccount();
         S.googleOnboarding=false;S.googlePinLogin=true;S.authMode="signin";
         return render(login());
