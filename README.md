@@ -4,7 +4,7 @@ Your dedicated space for focused Geometry practice.
 
 Learn. Practice. Improve. Repeat.
 
-## This repository powers the
+This repository powers the
 SSC Archives — Maths (Geometry) experience.
 
 Please open the official website to begin.
