@@ -11,6 +11,6 @@ Please open the official website to begin.
 
 
 
-## © 2026 SSC Archives · Maths (Geometry)
+## © 2026 SSC Archives
 
 Built for disciplined preparation.
