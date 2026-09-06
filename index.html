@@ -460,6 +460,7 @@ const defaultData=()=>({attempts:{},bookmarks:[],sizeStep:0,testPools:{},pausedT
 let D=loadData(), S={screen:"login",user:"",name:"",pin:"",set:1,q:0,ans:blankArr(),mark:blankBool(),date:"",seconds:900,deadline:0,phase:"first",bookmarkMode:false,bookmarkItems:[],state:blankState(),paletteVisible:true,autoSubmitting:false,submitBusy:false,pauseBusy:false,qTimes:blankArr().map(()=>0),qStartAt:0,authMode:"signin",googleOnboarding:false,googlePinLogin:false,googleEmail:"",accountType:"pin"};
 const isTouchDevice=()=>window.matchMedia("(pointer:coarse)").matches || navigator.maxTouchPoints>0;
 function account(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}
+function isDemoAccount(){return String(S.accountType||account()?.accountType||"").toLowerCase()==="demo"}
 function saveAccount(){localStorage.setItem(KEY,JSON.stringify({user:S.user,name:S.name||"",authUid:S.authUid||null,accountType:S.accountType||"pin",googleEmail:S.googleEmail||""}))}
 function loadData(){try{return Object.assign(defaultData(),JSON.parse(localStorage.getItem(DATA_KEY)||"{}"))}catch(e){return defaultData()}}
 function saveData(){localStorage.setItem(DATA_KEY,JSON.stringify(D))}
@@ -632,18 +633,18 @@ return `<header class="top homeTop"><div class="topin"><div class="brand">SSC <s
 <section class="hero card glass"><div><div class="tag">SSC ARCHIVES · MATHS (GEOMETRY)</div><h1>Welcome, ${S.user}</h1><p class="muted">Practice · Analyse · Progress</p></div><div class="heroActions"><button class="btn primary" data-home="tests">Start Test</button><button class="btn" data-home="progress">My Progress</button></div></section>
 ${D.pausedTest?`<section class="card glass" style="margin-bottom:18px"><div class="row between"><div><div class="tag">PAUSED</div><h2 style="margin:4px 0">${D.pausedTest.bookmarkMode?'Bookmarked Questions':`Set ${D.pausedTest.set}`} — ${D.pausedTest.phase==='revision'?'Revision':'Test'}</h2><p class="small muted">Question ${(D.pausedTest.q||0)+1} · ${fmt(Math.max(0,D.pausedTest.seconds||0))} remaining</p></div><button class="btn primary" id="resumePaused">Resume</button></div></section>`:''}
 <section class="dashboardGrid">
-<button class="dashCard glass" data-home="tests"><span class="dashIcon blue">▶</span><div><b>My Tests</b><small>5 Sets · 25 questions each</small></div><strong>›</strong></button>
+<button class="dashCard glass" data-home="tests"><span class="dashIcon blue">▶</span><div><b>My Tests</b><small>${isDemoAccount()?"Set 1 · 25 questions":"5 Sets · 25 questions each"}</small></div><strong>›</strong></button>
 <button class="dashCard glass" data-home="progress"><span class="dashIcon blue">📊</span><div><b>My Progress</b><small>Your performance &amp; analytics</small></div><strong>›</strong></button>
 <button class="dashCard glass" data-home="revision"><span class="dashIcon green">↻</span><div><b>Revision</b><small>Revision 1 · 2 · 3</small></div><strong>›</strong></button>
-<button class="dashCard glass" data-home="leaderboard"><span class="dashIcon orange">🏆</span><div><b>Leaderboard</b><small>Set-wise & overall ranking</small></div><strong>›</strong></button>
+<button class="dashCard glass" data-home="leaderboard"><span class="dashIcon orange">🏆</span><div><b>Leaderboard</b><small>${isDemoAccount()?"Set 1 ranking only":"Set-wise & overall ranking"}</small></div><strong>›</strong></button>
 <button class="dashCard glass" data-home="bookmarks"><span class="dashIcon purple">★</span><div><b>Bookmarked Questions</b><small>${bcount} saved · attempt separately</small></div><strong>›</strong></button>
 </section>
-<section class="card glass quick"><div class="row between"><div><h2>Quick Overview</h2><p class="small muted">Your five-set practice status</p></div><button class="btn" data-home="progress">View Full Progress</button></div><div class="miniGrid">${SETS.map(set=>{let r=rec(set);return `<button class="miniSet" data-set="${set}"><b>Set ${set}</b><span>${r.completed?`Attempts ${r.completed}`:"Not Attempted"}</span></button>`}).join("")}</div></section>
+<section class="card glass quick"><div class="row between"><div><h2>Quick Overview</h2><p class="small muted">${isDemoAccount()?"Set 1 practice status":"Your five-set practice status"}</p></div><button class="btn" data-home="progress">View Full Progress</button></div><div class="miniGrid">${(isDemoAccount()?[1]:SETS).map(set=>{let r=rec(set);return `<button class="miniSet" data-set="${set}"><b>Set ${set}</b><span>${r.completed?`Attempts ${r.completed}`:"Not Attempted"}</span></button>`}).join("")}</div></section>
 ${ns.length?`<section class="card glass noticeCard"><div class="row between"><div><h2>🔔 Due Notifications</h2><p class="small muted">Revision dates that need your attention</p></div><button class="btn warn" data-home="notifications">Open</button></div>${ns.slice(0,2).map(n=>`<div class="notif">🔔 <b>${n.text}</b><span class="small muted">Open Revision</span></div>`).join("")}</section>`:""}
 </main>`;
 }
 function sectionHeader(title,sub){return `<header class="top"><div class="topin"><button class="btn" data-home="home">← Home</button><div><b>${title}</b><div class="tag">MATHS · GEOMETRY</div></div></div></header><main class="wrap"><section class="card glass"><div class="tag">DASHBOARD SECTION</div><h1>${title}</h1><p class="muted">${sub}</p></section>`}
-function testsView(){return sectionHeader("My Tests","Each set is completed once; revisions are handled separately in Revision.")+`<section class="setsSection">${SETS.map(set=>{let r=rec(set),done=(r.completed||0)>=1,paused=!done&&D.pausedTest&&!D.pausedTest.bookmarkMode&&Number(D.pausedTest.set)===Number(set);return `<button class="set glass" data-set="${set}" ${done||paused?"disabled":""}><div class="row"><div><b>Set ${set}</b><small>25 Questions · ${done?"Completed":paused?"Paused — Resume from Home":"Not Attempted"}</small></div><b class="btn ${done||paused?"":"primary"}">${done?"✓ Completed":paused?"⏸ Paused":"Start Test ›"}</b></div></button>`}).join("")}</section></main>`}
+function testsView(){const availableSets=isDemoAccount()?[1]:SETS;return sectionHeader("My Tests",isDemoAccount()?"Demo access: Set 1 only.":"Each set is completed once; revisions are handled separately in Revision.")+`<section class="setsSection">${availableSets.map(set=>{let r=rec(set),done=(r.completed||0)>=1,paused=!done&&D.pausedTest&&!D.pausedTest.bookmarkMode&&Number(D.pausedTest.set)===Number(set);return `<button class="set glass" data-set="${set}" ${done||paused?"disabled":""}><div class="row"><div><b>Set ${set}</b><small>25 Questions · ${done?"Completed":paused?"Paused — Resume from Home":"Not Attempted"}</small></div><b class="btn ${done||paused?"":"primary"}">${done?"✓ Completed":paused?"⏸ Paused":"Start Test ›"}</b></div></button>`}).join("")}</section></main>`}
 function notificationsView(){let ns=notifications();return sectionHeader("Notifications","Revision due and overdue alerts.")+`<section class="card glass">${ns.length?ns.map(n=>`<div class="notice due" style="margin:8px 0"><b>${n.text}</b><p class="small muted">Set ${n.set} · Revision ${n.idx}</p></div>`).join(""):`<div class="notice ok">No revision notifications are due.</div>`}</section></main>`}
 function stageRecord(r,stage){
  const names={first:"First Attempt",r1:"Revision 1",r2:"Revision 2",r3:"Revision 3"};
@@ -764,18 +765,20 @@ function bindLeaderboardCarousel(){
 function leaderboardView(){
   const overall=Array.isArray(D.remoteLeaderboardOverall)?D.remoteLeaderboardOverall:[];
   const sets=D.remoteLeaderboardSets||{};
+  if(isDemoAccount()) return sectionHeader("Leaderboard","Demo access: Set 1 ranking only. Overall ranking is not available.")+`<section class="card glass"><h2>Set 1 Ranking</h2><p class="small muted">Top 10 users · First Attempt</p>${leaderboardRowsHtml(sets[1]||[],'set')}</section></main>`;
   return sectionHeader("Leaderboard","Top 10 overall and Set-wise rankings from completed first attempts.")+`<section class="card glass"><h2>Overall Ranking</h2><p class="small muted">All five Sets · first attempts only</p>${leaderboardRowsHtml(overall,'overall')}</section>${leaderboardSetCarouselHtml(sets)}</main>`;
 }
 async function openLeaderboard(){
   S.screen="leaderboard";
   render(leaderboardLoadingView());
   try{
-    const overall=await rpc('ssc_geometry_leaderboard',{p_limit:10});
-    const setResults=await Promise.all(SETS.map(set=>rpc('ssc_geometry_set_leaderboard',{p_set_id:set,p_limit:10})));
+    const overall=isDemoAccount()?[]:await rpc('ssc_geometry_leaderboard',{p_limit:10});
+    const leaderSets=isDemoAccount()?[1]:SETS;
+    const setResults=await Promise.all(leaderSets.map(set=>rpc('ssc_geometry_set_leaderboard',{p_set_id:set,p_limit:10})));
     D.remoteLeaderboardOverall=Array.isArray(overall)?overall:[];
-    D.remoteLeaderboardSets=Object.fromEntries(SETS.map((set,i)=>[set,Array.isArray(setResults[i])?setResults[i]:[]]));
+    D.remoteLeaderboardSets=Object.fromEntries(leaderSets.map((set,i)=>[set,Array.isArray(setResults[i])?setResults[i]:[]]));
     saveData();
-    if(S.screen==='leaderboard'){render(leaderboardView());bindLeaderboardCarousel();}
+    if(S.screen==='leaderboard'){render(leaderboardView());if(!isDemoAccount())bindLeaderboardCarousel();}
   }catch(err){
     console.error('Leaderboard load failed:',err);
     const msg=escapeHtml(String(err?.message||'Leaderboard data could not be loaded.'));
@@ -786,11 +789,11 @@ async function openLeaderboard(){
 function progressView(){
  let stages=["first","r1","r2","r3"],labels=["First Attempt","Revision 1","Revision 2","Revision 3"];
  const remote=D.remoteProgressAttempts||{};
- let setsHtml=SETS.map(set=>{let r=Object.prototype.hasOwnProperty.call(remote,setKey(set))?remote[setKey(set)]:{first:null,r1:null,r2:null,r3:null,r1_done:false,r2_done:false,r3_done:false,completed:0,lastScore:null,history:[]};let localFirst=stageRecord(rec(set),"first"),slides=stages.map((stage,i)=>{let h=stageRecord(r,stage),reviewBtn=(i===0&&h&&localFirst&&!localFirst.reviewUsed&&Array.isArray(localFirst.question_ids)&&Array.isArray(localFirst.answers))?`<button class="btn primary" data-review-set="${set}" style="margin-top:10px">Review Set · 1 Chance</button>`:"";return `<div class="progressStage ${i===0?"active":""}" data-progress-stage="${i}"><div class="progressStageHead"><div><b>${labels[i]}</b><div class="small muted">Set ${set} · ${h?.date||"Not completed"}</div></div><span class="stageBadge">${h?`${h.score??0}/25`:(i===0?"Not Attempted":"Pending")}</span></div>${h?progressBarHtml(h):`<div class="notice small">This stage has not been completed yet.</div>`}${reviewBtn}</div>`}).join("");return `<section class="card glass progressSetCard"><div class="row between"><h3 style="margin:0">Set ${set}</h3><span class="small muted">Swipe stages on mobile</span></div><div class="progressCarousel" data-progress-carousel>${slides}</div><div class="progressNav"><button class="btn progressArrow" data-progress-prev="${set}">← Previous</button><div class="progressDots">${labels.map((_,i)=>`<i class="${i===0?"active":""}" data-progress-dot="${set}" data-stage="${i}"></i>`).join("")}</div><button class="btn progressArrow" data-progress-next="${set}">Next →</button></div><div class="tag" style="margin-top:14px">ATTEMPT HISTORY</div>${historyTableHtml(r)}</section>`}).join("");
+ let setsHtml=(isDemoAccount()?[1]:SETS).map(set=>{let r=Object.prototype.hasOwnProperty.call(remote,setKey(set))?remote[setKey(set)]:{first:null,r1:null,r2:null,r3:null,r1_done:false,r2_done:false,r3_done:false,completed:0,lastScore:null,history:[]};let localFirst=stageRecord(rec(set),"first"),slides=stages.map((stage,i)=>{let h=stageRecord(r,stage),reviewBtn=(i===0&&h&&localFirst&&!localFirst.reviewUsed&&Array.isArray(localFirst.question_ids)&&Array.isArray(localFirst.answers))?`<button class="btn primary" data-review-set="${set}" style="margin-top:10px">Review Set · 1 Chance</button>`:"";return `<div class="progressStage ${i===0?"active":""}" data-progress-stage="${i}"><div class="progressStageHead"><div><b>${labels[i]}</b><div class="small muted">Set ${set} · ${h?.date||"Not completed"}</div></div><span class="stageBadge">${h?`${h.score??0}/25`:(i===0?"Not Attempted":"Pending")}</span></div>${h?progressBarHtml(h):`<div class="notice small">This stage has not been completed yet.</div>`}${reviewBtn}</div>`}).join("");return `<section class="card glass progressSetCard"><div class="row between"><h3 style="margin:0">Set ${set}</h3><span class="small muted">Swipe stages on mobile</span></div><div class="progressCarousel" data-progress-carousel>${slides}</div><div class="progressNav"><button class="btn progressArrow" data-progress-prev="${set}">← Previous</button><div class="progressDots">${labels.map((_,i)=>`<i class="${i===0?"active":""}" data-progress-dot="${set}" data-stage="${i}"></i>`).join("")}</div><button class="btn progressArrow" data-progress-next="${set}">Next →</button></div><div class="tag" style="margin-top:14px">ATTEMPT HISTORY</div>${historyTableHtml(r)}</section>`}).join("");
  const summary=D.remoteProgress?.summary||{};
  const attempted=Number(summary.sets_attempted??SETS.filter(x=>remote[setKey(x)]?.first).length);
  const latest=Number(summary.latest_score_total??0);
- return sectionHeader("My Progress","Live progress is tracked for this account.")+`<section class="card glass"><div class="stats"><div><div class="stat">${attempted}/5</div><small class="muted">Sets Attempted</small></div><div><div class="stat">${D.bookmarks.length}</div><small class="muted">Bookmarks</small></div><div><div class="stat">${latest}</div><small class="muted">Latest Score Total</small></div></div></section><section class="setsSection">${setsHtml}</section></main>`;
+ return sectionHeader("My Progress",isDemoAccount()?"Demo access: Set 1 only.":"Live progress is tracked for this account.")+`<section class="card glass"><div class="stats"><div><div class="stat">${isDemoAccount()?Math.min(attempted,1):attempted}/${isDemoAccount()?1:5}</div><small class="muted">Sets Attempted</small></div><div><div class="stat">${D.bookmarks.length}</div><small class="muted">Bookmarks</small></div><div><div class="stat">${latest}</div><small class="muted">Latest Score Total</small></div></div></section><section class="setsSection">${setsHtml}</section></main>`;
 }
 async function openProgress(){
  S.screen="progress";
@@ -800,7 +803,7 @@ async function openProgress(){
 }
 function revisionView(){
   try{
-    const rows=SETS.map(set=>{
+    const rows=(isDemoAccount()?[1]:SETS).map(set=>{
       const r=rec(set)||{};
       const completed=Number(r.completed||0);
       const stage=completed===0?0:(r.r1_done?(r.r2_done?(r.r3_done?4:3):2):1);
@@ -840,6 +843,7 @@ function safeRenderRevision(){
   }
 }
 async function startRevisionSet(set){
+  if(isDemoAccount() && Number(set)!==1){alert("Demo Account: only Set 1 revision is available.");return;}
   if(S.submitBusy||S.pauseBusy)return;
   const btn=document.querySelector(`[data-revision-set="${set}"]`);
   if(btn){btn.disabled=true;btn.dataset.originalLabel=btn.textContent;btn.textContent="Starting…";}
@@ -881,6 +885,7 @@ function profileView(){
 return sectionHeader("Profile","Account, progress backup and local-data controls.")+`<section class="card glass">
 <div class="profileLine"><span>Name</span><b>${escapeHtml(S.name||"—")}</b></div>
 <div class="profileLine"><span>User ID</span><b>${escapeHtml(S.user)}</b></div>
+${isDemoAccount()?`<div class="profileLine"><span>Account Type</span><b>Free Demo</b></div><div class="notice small" style="margin-top:15px"><b>Demo Access</b><br>Set 1, its revisions, Set 1 progress, Set 1 leaderboard, bookmarks, notifications and profile are available. Overall ranking and Sets 2–5 are locked.</div>`:""}
 <div class="profileLine"><span>Authentication</span><b id="authMethodLabel">Checking…</b></div>
 <div class="profileLine"><span>Google Authentication</span><b id="googleLinkLabel">Checking…</b></div>
 <div class="notice small" style="margin-top:15px"><b>Google Account Linking</b><br>Google only authenticates you. SSC Archives does not receive or store your Google password. SSC Archives uses the verified Google account email for authentication and account matching. Your Full Name is entered by you during account setup; it is not taken from your Google profile. Linking requires your explicit confirmation.</div>
@@ -1070,7 +1075,7 @@ ${solutionAnswers(item,q)}
 </section></main>`;
 }
 function bookmarkedView(){
-let items=D.bookmarks;
+let items=isDemoAccount()?D.bookmarks.filter(x=>Number(x.set)===1):D.bookmarks;
 return `<header class="top"><div class="topin"><button class="btn" id="homeBack">← Home</button><div><b>Bookmarked Questions</b></div></div></header><main class="wrap"><section class="card glass"><h2>Bookmarked Questions</h2><p class="muted">${items.length} saved question(s).</p>${items.length?items.map((x,i)=>`<button class="set" data-bset="${x.set}" data-bq="${x.q}" style="margin:6px 0"><div><b>Set ${x.set} · Question ${x.q+1}</b><small>${QUESTIONS[x.q][0]}</small></div></button>`).join(""):`<div class="notice">No bookmarked questions yet.</div>`}<br>${items.length?`<button class="btn primary" id="attemptBookmarks">Attempt Bookmarked Questions</button>`:""}</section></main>`;
 }
 let mathTypesetJob=0;
@@ -1281,8 +1286,16 @@ $("demoCreate")?.addEventListener("click",async()=>{
   try{
     const cap=await rpc("ssc_account_capacity");
     if(!cap?.demo_available) throw new Error("All 20 demo slots are currently occupied.");
-    const d=await rpc("ssc_create_demo_account");
-    if(!d?.available) throw new Error("Demo availability changed. Please try again.");
+    let browserToken=localStorage.getItem("SSC_DEMO_BROWSER_TOKEN");
+    if(!browserToken){
+      browserToken=(crypto?.randomUUID?crypto.randomUUID():("demo-"+Date.now()+"-"+Math.random().toString(36).slice(2)));
+      localStorage.setItem("SSC_DEMO_BROWSER_TOKEN",browserToken);
+    }
+    const d=await rpc("ssc_create_demo_account",{p_browser_token:browserToken});
+    if(!d?.available){
+      if(d?.reason==="BROWSER_ALREADY_HAS_DEMO") throw new Error("This browser already has an active Demo Account.");
+      throw new Error("Demo availability changed. Please try again.");
+    }
     const code=String(d.demo_code||"").toUpperCase(), pin=String(d.demo_pin||"");
     if(!code||!/^\d{6}$/.test(pin)) throw new Error("The demo account could not be generated safely.");
     const cred=await authCredentialFor(code,pin);
@@ -1443,7 +1456,7 @@ $("deleteProfile")?.addEventListener("click",()=>{
  S={screen:"login",user:"",name:"",pin:"",set:1,q:0,ans:blankArr(),mark:blankBool(),date:"",seconds:900,deadline:0,phase:"first",bookmarkMode:false,bookmarkItems:[],state:blankState(),paletteVisible:true,autoSubmitting:false,qTimes:blankArr().map(()=>0),qStartAt:0,authMode:"signin",googleOnboarding:false,googlePinLogin:false,googleEmail:"",accountType:"pin"};
  render(login());
 });
-document.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{S.set=+b.dataset.set;S.phase=rec(S.set).completed===0?"first":"revision";$("modal").innerHTML=startModal();bindModal()});
+document.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{if(isDemoAccount()&&Number(b.dataset.set)!==1)return alert("Demo Account: only Set 1 is available.");S.set=+b.dataset.set;S.phase=rec(S.set).completed===0?"first":"revision";$("modal").innerHTML=startModal();bindModal()});
 document.querySelectorAll("[data-review-set]").forEach(b=>b.onclick=()=>openHistoricalReview(Number(b.dataset.reviewSet),"First Attempt"));
 document.querySelectorAll("[data-revision-set]").forEach(b=>b.onclick=()=>startRevisionSet(Number(b.dataset.revisionSet)));
 if(S.screen==="home")bindHomeScroll();
@@ -1462,8 +1475,8 @@ $("resumePaused")?.addEventListener("click",resumePausedTest);
 
 $("bookmarks")?.addEventListener("click",()=>{S.screen="bookmarked";render(bookmarkedView())});
 $("homeBack")?.addEventListener("click",()=>{S.screen="home";render(home())});
-document.querySelectorAll("[data-bset]").forEach(b=>b.onclick=()=>{S.set=+b.dataset.bset;S.q=+b.dataset.bq;S.screen="solutions";render(solutions())});
-$("attemptBookmarks")?.addEventListener("click",()=>{if(D.bookmarks.length){S.bookmarkMode=true;S.bookmarkItems=[...D.bookmarks];S.q=0;S.ans=Array(S.bookmarkItems.length).fill(null);S.mark=Array(S.bookmarkItems.length).fill(false);S.state=Array(S.bookmarkItems.length).fill("new");S.qTimes=Array(S.bookmarkItems.length).fill(0);S.qStartAt=Date.now();S.pool=S.bookmarkItems.map(x=>x.q);S.paletteVisible=!isTouchDevice();S.date=new Date().toISOString().slice(0,10);S.seconds=0;S.deadline=0;S.screen="test";render(test())}});
+document.querySelectorAll("[data-bset]").forEach(b=>b.onclick=()=>{if(isDemoAccount()&&Number(b.dataset.bset)!==1)return alert("Demo Account: only Set 1 bookmarks are available.");S.set=+b.dataset.bset;S.q=+b.dataset.bq;S.screen="solutions";render(solutions())});
+$("attemptBookmarks")?.addEventListener("click",()=>{if(D.bookmarks.length){S.bookmarkMode=true;S.bookmarkItems=(isDemoAccount()?D.bookmarks.filter(x=>Number(x.set)===1):D.bookmarks).map(x=>x);S.q=0;S.ans=Array(S.bookmarkItems.length).fill(null);S.mark=Array(S.bookmarkItems.length).fill(false);S.state=Array(S.bookmarkItems.length).fill("new");S.qTimes=Array(S.bookmarkItems.length).fill(0);S.qStartAt=Date.now();S.pool=S.bookmarkItems.map(x=>x.q);S.paletteVisible=!isTouchDevice();S.date=new Date().toISOString().slice(0,10);S.seconds=0;S.deadline=0;S.screen="test";render(test())}});
 $("back")?.addEventListener("click",()=>{
   $("modal").innerHTML=pauseConfirmModal();
   $("pauseNo")?.addEventListener("click",()=>{$("modal").innerHTML=""});
