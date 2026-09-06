@@ -435,7 +435,7 @@ const defaultData=()=>({attempts:{},bookmarks:[],sizeStep:0,testPools:{},pausedT
 let D=loadData(), S={screen:"login",user:"",name:"",pin:"",set:1,q:0,ans:blankArr(),mark:blankBool(),date:"",seconds:900,deadline:0,phase:"first",bookmarkMode:false,bookmarkItems:[],state:blankState(),paletteVisible:true,autoSubmitting:false,submitBusy:false,pauseBusy:false,qTimes:blankArr().map(()=>0),qStartAt:0};
 const isTouchDevice=()=>window.matchMedia("(pointer:coarse)").matches || navigator.maxTouchPoints>0;
 function account(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}
-function saveAccount(){localStorage.setItem(KEY,JSON.stringify({user:S.user,name:S.name||""}))}
+function saveAccount(){localStorage.setItem(KEY,JSON.stringify({user:S.user,name:S.name||"",authUid:S.authUid||null}))}
 function loadData(){try{return Object.assign(defaultData(),JSON.parse(localStorage.getItem(DATA_KEY)||"{}"))}catch(e){return defaultData()}}
 function saveData(){localStorage.setItem(DATA_KEY,JSON.stringify(D))}
 function setKey(set){return "set"+set}
@@ -733,7 +733,7 @@ async function startRevisionSet(set){
 function showPolicyModal(type){
  const isTerms=type==='terms';
  const title=isTerms?'Terms & Conditions':'Privacy & Data';
- const body=isTerms?`<p>SSC Archives is provided for educational practice and testing.</p><ul><li>Use the platform only for lawful educational purposes.</li><li>Question data is based on SSC previous-year questions (PYQs); accuracy is not guaranteed.</li><li>This test build may contain bugs or technical limitations.</li><li>Features and policies may be updated as the project moves toward production.</li></ul>`:`<p>SSC Archives stores account and progress information needed to provide login and test features.</p><ul><li>Progress may be stored locally in your browser and, where enabled, in the connected account database.</li><li>Backup files are created only when you choose Create Backup.</li><li>Do not share your backup file or account credentials with others.</li><li>Local data can be removed using the Delete Profile & Local Data control.</li></ul>`;
+ const body=isTerms?`<p>SSC Archives is provided for educational practice and testing.</p><ul><li>Use the platform only for lawful educational purposes.</li><li>Question data is based on SSC previous-year questions (PYQs); accuracy is not guaranteed.</li><li>This test build may contain bugs or technical limitations.</li><li>Features and policies may be updated as the project moves toward production.</li></ul>`:`<p>SSC Archives stores account and progress information needed to provide login and test features.</p><ul><li>Progress may be stored locally in your browser and, where enabled, in the connected account database.</li><li>Backup files are created only when you choose Create Backup.</li><li>Do not share your backup file or account credentials with others.</li><li>Local data can be removed using the Delete Profile & Local Data control.</li><li>When Google Sign-In is used, Google handles authentication. SSC Archives does not receive or store your Google password; only the verified Google identity and basic profile information needed for authentication/linking are used.</li></ul>`;
  const m=$('modal');
  m.innerHTML=`<div class="modal"><div class="modalbox glass" role="dialog" aria-modal="true" aria-labelledby="policyTitle"><div class="row between"><h2 id="policyTitle">${title}</h2><button class="btn" type="button" id="closePolicy" aria-label="Close">✕</button></div><div class="small" style="line-height:1.65;margin-top:10px">${body}</div><div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn primary" type="button" id="closePolicy2">Close</button></div></div></div>`;
  const close=()=>m.innerHTML='';
@@ -744,8 +744,10 @@ function profileView(){
 return sectionHeader("Profile","Account, progress backup and local-data controls.")+`<section class="card glass">
 <div class="profileLine"><span>Name</span><b>${escapeHtml(S.name||"—")}</b></div>
 <div class="profileLine"><span>User ID</span><b>${escapeHtml(S.user)}</b></div>
-<div class="profileLine"><span>Authentication</span><b>User / Google</b></div>
-<div class="profileLine"><span>Google Authentication</span><b>Pending production enablement</b></div>
+<div class="profileLine"><span>Authentication</span><b id="authMethodLabel">Checking…</b></div>
+<div class="profileLine"><span>Google Authentication</span><b id="googleLinkLabel">Checking…</b></div>
+<div class="notice small" style="margin-top:15px"><b>Google Account Linking</b><br>Google only authenticates you. SSC Archives does not receive or store your Google password. Your verified Google email and basic profile information are used only for authentication and account linking. Linking requires your explicit confirmation.</div>
+<div class="row" style="margin-top:12px"><button class="btn" id="linkGoogle">Link Google Account</button></div>
 <div class="notice small" style="margin-top:15px"><b>Progress Backup</b><br>Create a backup file so your progress can be restored if browser storage is cleared. Backup and Restore are available from this profile.</div>
 <div class="row" style="margin-top:15px"><button class="btn primary" id="backupProgress">Create Backup</button><button class="btn" id="restoreProgress">Restore Backup</button><input id="restoreFile" type="file" accept="application/json,.json" class="hidden"></div>
 <div class="row" style="margin-top:15px"><button class="btn" type="button" id="termsBtn">§ Terms & Conditions</button><button class="btn" type="button" id="privacyBtn">🔒 Privacy & Data</button></div>
@@ -1094,6 +1096,7 @@ try{
     if(error)throw error;
   }
   await registerSupabaseProfile();
+  S.authUid=(await supabaseClient.auth.getSession()).data.session?.user?.id||null;
 }catch(e){
   console.error(e); S.pin="";
   return alert("Authentication failed: "+e.message);
@@ -1103,15 +1106,22 @@ if(first)showSplash(()=>{render(home());showHowTo()}); else render(home());
 });
 $("google")?.addEventListener("click",async()=>{
   try{
-    const {error}=await supabaseClient.auth.signInWithOAuth({
-      provider:"google",
-      options:{redirectTo:window.location.origin+window.location.pathname}
-    });
+    const session=(await supabaseClient.auth.getSession()).data.session;
+    const saved=account();
+    if(saved && !session) return alert("To connect Google to this existing User ID, first log in with your User ID + PIN, then use 'Link Google Account' from Profile. This prevents duplicate accounts.");
+    const {error}=await supabaseClient.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname}});
     if(error)throw error;
-  }catch(e){
-    console.error(e);
-    alert("Google authentication failed: "+(e?.message||"Please try again."));
-  }
+  }catch(e){console.error(e);alert("Google authentication failed: "+(e?.message||"Please try again."));}
+});
+$("linkGoogle")?.addEventListener("click",async()=>{
+  try{
+    const session=(await supabaseClient.auth.getSession()).data.session;
+    if(!session?.user?.id) return alert("Please log in with your User ID + PIN before linking Google.");
+    const ok=confirm("Link your Google account to this existing SSC Archives User ID?\n\nGoogle authenticates you. Your Google password is not shared with SSC Archives.\n\nContinue only if this is your own Google account.");
+    if(!ok)return;
+    const {error}=await supabaseClient.auth.linkIdentity({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname}});
+    if(error)throw error;
+  }catch(e){console.error(e);alert("Google linking failed: "+(e?.message||"Please try again."));}
 });
 $("signout")?.addEventListener("click",async()=>{localStorage.setItem(LOGOUT_KEY,"1");clearLastView();try{await supabaseClient.auth.signOut()}catch(e){console.warn(e)}S.unlocked=false;S.pin="";S.user="";S.name="";S.screen="login";render(login())});
 $("backupProgress")?.addEventListener("click",()=>{
@@ -1138,6 +1148,16 @@ document.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{S.set=+b.datas
 document.querySelectorAll("[data-review-set]").forEach(b=>b.onclick=()=>openHistoricalReview(Number(b.dataset.reviewSet),"First Attempt"));
 document.querySelectorAll("[data-revision-set]").forEach(b=>b.onclick=()=>startRevisionSet(Number(b.dataset.revisionSet)));
 if(S.screen==="home")bindHomeScroll();
+if(S.screen==="profile"){
+  supabaseClient.auth.getSession().then(({data})=>{
+    const ids=Array.isArray(data?.session?.user?.identities)?data.session.user.identities.map(i=>i.provider):[];
+    const hasGoogle=ids.includes("google");
+    const hasUser=ids.includes("email") || String(data?.session?.user?.email||"").endsWith("@accounts.sscarchives.invalid");
+    $("authMethodLabel")&&( $("authMethodLabel").textContent=hasGoogle&&hasUser?"User + Google":hasGoogle?"Google":"User" );
+    $("googleLinkLabel")&&( $("googleLinkLabel").textContent=hasGoogle?"Linked":"Not linked" );
+    const b=$("linkGoogle"); if(b){b.disabled=hasGoogle;b.textContent=hasGoogle?"Google Account Linked":"Link Google Account";}
+  }).catch(()=>{});
+}
 document.querySelectorAll("[data-home]").forEach(b=>b.onclick=()=>{let v=b.dataset.home; if(v==="home"){S.screen="home";return render(home())} if(v==="tests"){S.screen="tests";return render(testsView())} if(v==="notifications"){S.screen="notifications";return render(notificationsView())} if(v==="progress"){return openProgress()} if(v==="leaderboard"){return openLeaderboard()} if(v==="revision"){return safeRenderRevision()} if(v==="bookmarks"){S.screen="bookmarked";return render(bookmarkedView())} if(v==="profile"){S.screen="profile";return render(profileView())}});
 $("resumePaused")?.addEventListener("click",resumePausedTest);
 
@@ -1335,12 +1355,17 @@ async function boot(){
       S.name=String(session.user.user_metadata?.full_name||session.user.user_metadata?.name||session.user.email||S.user).slice(0,80);
       S.pin="";
       try{await registerSupabaseProfile();}catch(e){console.error(e);return alert("Google profile setup failed: "+(e?.message||"Please try again."));}
+      S.authUid=session.user.id;
       saveAccount();
       try{await loadRemoteBookmarks();}catch(e){console.warn("Remote bookmark preload skipped:",e.message)}
       return showSplash(()=>render(home()));
     }
+    if(saved && session && saved.authUid && saved.authUid!==session.user.id){
+      try{await supabaseClient.auth.signOut()}catch(e){console.warn("Mismatched session cleanup skipped:",e.message)}
+      return alert("The saved account and current authentication session do not match. Please sign in with the correct method.");
+    }
     if(saved && session){
-      S.user=saved.user;S.name=saved.name||"";S.pin="";
+      S.user=saved.user;S.name=saved.name||"";S.pin="";S.authUid=session.user.id;
       try{await loadRemoteBookmarks();}catch(e){console.warn('Remote bookmark preload skipped:',e.message)}
       showSplash(()=>{
         const lv=getLastView();
