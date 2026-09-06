@@ -1359,7 +1359,8 @@ $("login")?.addEventListener("click",async()=>{
      if(pinAuthError)throw new Error("PIN login setup failed: "+pinAuthError.message);
      if(pinCheck?.needs_setup===true) await rpc("ssc_set_my_pin_hash",{p_pin_hash:await sha256Hex(p)});
    }else{
-     const {error}=await supabaseClient.auth.signInWithPassword({email:cred.email,password:cred.password});
+     const loginEmail=(a?.accountType==="google"&&a?.googleEmail)?String(a.googleEmail).trim():cred.email;
+     const {error}=await supabaseClient.auth.signInWithPassword({email:loginEmail,password:cred.password});
      if(error)throw error;
    }
    if(a?.accountType==="demo"){
