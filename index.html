@@ -1327,7 +1327,7 @@ $("completeGoogleSignup")?.addEventListener("click",async()=>{
     const cred=await authCredentialFor(u,pin);
     const {error:pinAuthError}=await supabaseClient.auth.updateUser({password:cred.password});
     if(pinAuthError)throw new Error("PIN login setup failed: "+pinAuthError.message);
-    await rpc("ssc_set_my_pin_hash",{p_pin_hash:await sha256Hex(pin)});
+    await rpc("ssc_bootstrap_pin",{p_user_code:u,p_pin_hash:await sha256Hex(pin)});
     S.authUid=session.user.id;S.accountType="google";S.googleEmail=String(session.user.email||S.googleEmail||"");
     S.googleOnboarding=false;S.googlePinLogin=false;S.authMode="signin";saveAccount();localStorage.removeItem(LOGOUT_KEY);
     S.screen="home";showSplash(()=>{render(home());showHowTo()});
@@ -1354,7 +1354,7 @@ $("login")?.addEventListener("click",async()=>{
    const cred=await authCredentialFor(u,p);
    if(!S.googlePinLogin){
      const loginEmail=await rpc("ssc_get_login_email",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
-     if(!loginEmail) throw new Error("Invalid user or PIN.");
+     if(!loginEmail) throw new Error("PIN login is not initialized for this account. Please complete one Google verification + PIN setup first.");
      const {error}=await supabaseClient.auth.signInWithPassword({email:String(loginEmail).trim(),password:cred.password});
      if(error)throw error;
    }else{
@@ -1362,7 +1362,7 @@ $("login")?.addEventListener("click",async()=>{
      if(pinCheck?.valid!==true && pinCheck?.needs_setup!==true)throw new Error("Invalid PIN.");
      const {error:pinAuthError}=await supabaseClient.auth.updateUser({password:cred.password});
      if(pinAuthError)throw new Error("PIN login setup failed: "+pinAuthError.message);
-     if(pinCheck?.needs_setup===true) await rpc("ssc_set_my_pin_hash",{p_pin_hash:await sha256Hex(p)});
+     if(pinCheck?.needs_setup===true) await rpc("ssc_bootstrap_pin",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
    }
    if(a?.accountType==="demo"){
      const result=await rpc("ssc_demo_login",{p_demo_code:u,p_pin_hash:await sha256Hex(p)});
