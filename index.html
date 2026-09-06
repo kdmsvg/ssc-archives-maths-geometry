@@ -613,10 +613,10 @@ function login(){
    <h2>Sign In (Existing Users)</h2><p class="small muted">Your registered User ID is used with your PIN.</p>
    ${hasSaved?`<div class="field"><label>User ID</label><input id="uid" value="${escapeHtml(a?.user||"")}" readonly autocomplete="username"></div><div class="field"><label>PIN</label><input id="pin" inputmode="numeric" maxlength="6" placeholder="Enter your PIN" autocomplete="current-password"></div><button class="btn primary" id="login" style="width:100%">Sign In</button><p class="small muted authNote">Once registered, setup screens disappear. Your account User ID stays linked to your login.</p><button class="btn recoveryBtn" id="forgotAccessBtn" type="button">Forgot User ID / PIN?</button>`:`<div class="notice small">After Google verification, SSC Archives will either open account setup for a new user or automatically show the existing User ID and ask only for the PIN.</div><button class="btn recoveryBtn" id="forgotAccessBtn" type="button">Forgot User ID / PIN?</button>`}
  </section></div>
- <section class="demoCard"><div class="demoHead"><div><b>FREE DEMO USER</b><div class="small muted">No Google or email required.</div></div><span id="demoStatus" class="demoStatus">Availability: Checking…</span></div>
+ <section class="demoCard"><div class="demoHead"><div><b>FREE DEMO USER</b><div class="small muted">No Google or email required.</div></div><span id="demoStatus" class="demoStatus">Total Demo Registrations: Checking…</span></div>
  <p class="small muted demoNote">Try Set 1 and its allowed revisions, scheduling, marks and analytics. Other areas remain locked.</p>
  <button class="btn demoBtn" id="demoCreate" type="button">Create Free Demo Account</button>
- <p class="small muted" style="margin-bottom:0">Maximum <b>20 active demo users</b> at a time · maximum 2 logins per demo.</p></section>
+ <p class="small muted" style="margin:8px 0 0"><b>Live Demo Slots: 20</b></p></section>
  <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
  </section></main>`;
 }
@@ -1264,12 +1264,12 @@ async function refreshAuthCapacity(){
   const box=$("demoStatus"); if(!box)return;
   try{
     const cap=await rpc("ssc_account_capacity");
-    const active=Number(cap?.demo_occupied??0), limit=Number(cap?.demo_limit??20);
-    box.textContent=`Availability: ${active}/${limit} · ${cap?.demo_available?"Available":"Full"}`;
-    box.dataset.available=cap?.demo_available?"1":"0";
+    const total=Number(cap?.demo_registration_total??0);
+    box.textContent=`Total Demo Registrations: ${total}`;
+    box.dataset.available="1";
     document.querySelectorAll(".accountLimit").forEach(el=>{const gc=Number(cap?.google_registered??0),gl=Number(cap?.google_limit??30);el.textContent=`Google: ${gc} user${gc===1?"":"s"} added · ${Math.max(0,gl-gc)} slot${Math.max(0,gl-gc)===1?"":"s"} available`;el.style.color=cap?.google_available?"var(--blue)":"var(--red)";});
   }catch(e){
-    box.textContent="Availability: unavailable";
+    box.textContent="Total Demo Registrations: unavailable";
     box.dataset.available="0";
   }
 }
@@ -1285,8 +1285,6 @@ $("demoCreate")?.addEventListener("click",async()=>{
   b.disabled=true;b.textContent="Creating…";
   const createDemo=async()=>{
     try{
-      const cap=await rpc("ssc_account_capacity");
-      if(!cap?.demo_available) throw new Error("All 20 demo slots are currently occupied.");
       let browserToken=localStorage.getItem("SSC_DEMO_BROWSER_TOKEN");
       if(!browserToken){
         browserToken=(crypto?.randomUUID?crypto.randomUUID():("demo-"+Date.now()+"-"+Math.random().toString(36).slice(2)));
