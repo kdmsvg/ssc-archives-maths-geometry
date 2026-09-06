@@ -14,7 +14,7 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
 .top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.82);border-bottom:1px solid var(--line);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
 .topin{max-width:1220px;margin:auto;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font-weight:900;font-size:24px;letter-spacing:-1px}.brand span{color:var(--blue)}.tag{font-size:9px;letter-spacing:1.7px;color:var(--muted)}
 .wrap{max-width:1220px;margin:auto;padding:22px}.card{border-radius:20px;padding:20px}
-.btn{border:1px solid var(--line);background:rgba(255,255,255,.88);color:var(--ink);padding:10px 14px;border-radius:11px;font-weight:760}.btn.palette-closed{background:#eefaf3;color:#08753a;border-color:#9ed8b5}.btn.palette-open{background:#fff0f0;color:#a51d22;border-color:#e8a2a5}.btn.primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;border:0}.btn.danger{background:#fff0f0;color:var(--red)}.btn.warn{background:#fff8e8;color:#9a6500}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.88);color:var(--ink);padding:10px 14px;border-radius:11px;font-weight:760}.btn.primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;border:0}.btn.danger{background:#fff0f0;color:var(--red)}.btn.warn{background:#fff8e8;color:#9a6500}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.between{justify-content:space-between}.muted{color:var(--muted)}.small{font-size:12px}
 h1{font-size:42px;line-height:1.04;letter-spacing:-1.5px;margin:7px 0 15px}h2{margin:0 0 10px}
 .notice{padding:13px 15px;border-radius:12px;background:rgba(239,247,255,.9);border:1px solid #d7e8fa}
@@ -123,13 +123,13 @@ html{scroll-behavior:smooth}
   .actions{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
   .paletteOverlay{
     position:fixed;inset:0;z-index:1000;
-    display:flex;align-items:flex-end;justify-content:center;
-    padding:70px 12px calc(84px + env(safe-area-inset-bottom));
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:70px 12px 20px;
     background:rgba(17,35,60,.20);
     animation:v14Fade .12s ease-out;
   }
   .palettePopup{
-    width:min(94vw,430px);max-height:64vh;overflow:auto;
+    width:min(94vw,430px);max-height:72vh;overflow:auto;
     background:#fff;border:1px solid var(--line);border-radius:18px;
     padding:14px;box-shadow:0 16px 42px rgba(28,58,94,.20);
     animation:v14Drop .14s ease-out;
@@ -428,8 +428,18 @@ function rpcWithTimeout(name,args,ms=12000){
 }
 // Serialize answer/mark writes so Submit never races a pending question update.
 let remoteWriteChain=Promise.resolve();
+function withRemoteTimeout(promise,ms=8000){
+  return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error("Remote save timed out.")),ms))]);
+}
+async function runRemoteWrite(fn){
+  let lastError=null;
+  for(let attempt=1;attempt<=2;attempt++){
+    try{return await withRemoteTimeout(fn(),8000)}catch(e){lastError=e}
+  }
+  throw lastError||new Error("Remote save failed.");
+}
 function queueRemoteWrite(fn){
-  const run=remoteWriteChain.then(fn,fn);
+  const run=remoteWriteChain.then(()=>runRemoteWrite(fn),()=>runRemoteWrite(fn));
   remoteWriteChain=run.catch(()=>{});
   return run;
 }
@@ -448,18 +458,12 @@ async function syncAnswerRemote(){
   if(!S.testId||S.bookmarkMode)return;
   const position=S.q+1;
   const letter=S.ans[S.q]===null?null:String.fromCharCode(65+S.ans[S.q]);
-  return queueRemoteWrite(async()=>{
-    try{await rpc('mg_set_answer',{p_test_id:S.testId,p_position:position,p_selected_option:letter})}
-    catch(e){console.error(e)}
-  });
+  return queueRemoteWrite(()=>rpc('mg_set_answer',{p_test_id:S.testId,p_position:position,p_selected_option:letter}));
 }
 async function syncMarkRemote(marked){
   if(!S.testId||S.bookmarkMode)return;
   const position=S.q+1;
-  return queueRemoteWrite(async()=>{
-    try{await rpc('mg_mark_review',{p_test_id:S.testId,p_position:position,p_marked:marked})}
-    catch(e){console.error(e)}
-  });
+  return queueRemoteWrite(()=>rpc('mg_mark_review',{p_test_id:S.testId,p_position:position,p_marked:marked}));
 }
 
 const KEY="ssc_archives_account_v4";
@@ -474,7 +478,6 @@ const blankState=()=>Array(25).fill("new");
 const defaultData=()=>({attempts:{},bookmarks:[],sizeStep:0,testPools:{},pausedTest:null});
 let D=loadData(), S={screen:"login",user:"",name:"",pin:"",set:1,q:0,ans:blankArr(),mark:blankBool(),date:"",seconds:900,deadline:0,phase:"first",bookmarkMode:false,bookmarkItems:[],state:blankState(),paletteVisible:true,autoSubmitting:false,submitBusy:false,pauseBusy:false,qTimes:blankArr().map(()=>0),qStartAt:0,authMode:"signin",googleOnboarding:false,googlePinLogin:false,googleEmail:"",accountType:"pin"};
 const isTouchDevice=()=>window.matchMedia("(pointer:coarse)").matches || navigator.maxTouchPoints>0;
-const isPhoneDevice=()=>window.matchMedia("(max-width:760px)").matches;
 function account(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}
 function isDemoAccount(){return String(S.accountType||account()?.accountType||"").toLowerCase()==="demo"}
 function saveAccount(){localStorage.setItem(KEY,JSON.stringify({user:S.user,name:S.name||"",authUid:S.authUid||null,accountType:S.accountType||"pin",googleEmail:S.googleEmail||""}))}
@@ -505,7 +508,7 @@ function ensureTestPool(set){
   if(!validPool(pool)) throw new Error('Generated test failed bucket/uniqueness validation.');
   D.testPools[key]=pool; saveData(); return pool.slice();
 }
-function resetTest(){S.q=0;S.ans=blankArr();S.mark=blankBool();S.state=blankState();S.qTimes=blankArr().map(()=>0);S.qStartAt=Date.now();S.paletteVisible=!isPhoneDevice();S.seconds=900;S.deadline=0;S.autoSubmitting=false;S.pool=S.bookmarkMode?(S.bookmarkItems||[]).map(x=>x.q):[]}
+function resetTest(){S.q=0;S.ans=blankArr();S.mark=blankBool();S.state=blankState();S.qTimes=blankArr().map(()=>0);S.qStartAt=Date.now();S.paletteVisible=!isTouchDevice();S.seconds=900;S.deadline=0;S.autoSubmitting=false;S.pool=S.bookmarkMode?(S.bookmarkItems||[]).map(x=>x.q):[]}
 function fmt(s){return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
 function todayISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function sizePx(){return [16,18,20,22,24][D.sizeStep+2]}
@@ -925,7 +928,7 @@ ${isDemoAccount()?`<div class="profileLine"><span>Account Type</span><b>Free Dem
 <div class="notice due small" style="margin-top:15px"><b>Delete Profile</b><br>Currently removes the profile and saved local data from this browser. Profile deletion currently removes this browser's saved profile and data.</div>
 <div class="row" style="margin-top:15px"><button class="btn danger" id="deleteProfile">Delete Profile & Local Data</button><button class="btn" id="signout">Sign Out</button></div>
 <div class="notice small" style="margin-top:18px"><b>Disclaimer</b><br>SSC Archives is a production-integration build. The questions are SSC previous-year questions (PYQs) and are not original content created by this platform. Question statements, formatting, syntax, solutions, explanations, translations, or answer data may contain errors or inaccuracies. This build may contain bugs, security issues, or other technical problems. Use it for testing and educational practice only.</div>
-<div class="small muted" style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">SSC Archives · Version 1.0.0 · © 2026 SSC Archives. All rights reserved.</div>
+<div class="small muted" style="text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">SSC Archives · Version 0.4.0 · © 2026 SSC Archives. All rights reserved.</div>
 </section></main>`;
 }
 function paletteClass(i){
@@ -946,7 +949,7 @@ function recordQuestionTime(){
 function goToQuestion(n){
   recordQuestionTime();
   S.q=n;
-  if(isPhoneDevice()) S.paletteVisible=false;
+  S.paletteVisible=false;
   S.qStartAt=Date.now();
   render(test());
 }
@@ -985,8 +988,8 @@ function currentRecord(){const item=activeItem();return QUESTIONS[item.q]?.[4]||
 function test(){
 let item=activeItem(), q=QUESTIONS[item.q], total=S.bookmarkMode?S.bookmarkItems.length:25;
 let title=S.bookmarkMode?"Bookmarked Questions":`Maths (Geometry) — Set ${S.set}`;
-let palette=isPhoneDevice()?false:S.paletteVisible;
-return `<header class="top testTop"><div class="topin"><button class="btn" id="back">← <span class="backFull">Back</span><span class="backShort">Back</span></button><div class="testHeadTitle"><b class="desktopTestTitle">${title}</b><b class="mobileTestTitle">${S.bookmarkMode?"Bookmarked":"Set "+item.set}</b><div class="small muted desktopSetLine">Set ${item.set}</div></div><div class="testHeadTools">${sizeButtons()}<button class="btn ${palette?"palette-open":"palette-closed"}" id="paletteToggle">Palette</button><div class="timer testTimer ${S.seconds<=120?"low":""}" id="timer">${S.bookmarkMode?"00:00":fmt(S.seconds)}</div><button class="btn danger" id="submit">Submit Test</button></div></div></header>
+let palette=isTouchDevice()?false:S.paletteVisible;
+return `<header class="top testTop"><div class="topin"><button class="btn" id="back">← <span class="backFull">Back</span><span class="backShort">Back</span></button><div class="testHeadTitle"><b class="desktopTestTitle">${title}</b><b class="mobileTestTitle">${S.bookmarkMode?"Bookmarked":"Set "+item.set}</b><div class="small muted desktopSetLine">Set ${item.set}</div></div><div class="testHeadTools">${sizeButtons()}<button class="btn" id="paletteToggle">Palette</button><div class="timer testTimer ${S.seconds<=120?"low":""}" id="timer">${S.bookmarkMode?"00:00":fmt(S.seconds)}</div><button class="btn danger" id="submit">Submit Test</button></div></div></header>
 <main class="wrap"><div class="test ${palette?"":"palette-hidden"}"><section class="card glass"><div class="testbar"><div><b>${title}</b><div class="small muted">${S.bookmarkMode?"Saved questions only":"English · Question "+(S.q+1)+" / 25"} · Test Date: ${S.date}</div></div><span class="small muted">${S.ans.filter(x=>x!==null).length}/${total} Answered</span></div>
 <div class="progress"><i style="width:${((S.q+1)/total)*100}%"></i></div>
 <div class="row between"><span class="small muted">Question ${S.q+1} / ${total}${S.bookmarkMode?` · Set ${item.set}`:""}</span><button class="btn bookmark" id="bookmark">${isBookmarked(item.set,item.q)?"★ Bookmarked":"☆ Bookmark"}</button></div>
@@ -1048,7 +1051,7 @@ async function resumePausedTest(){
   if(S.pauseBusy)return;
   const p=D.pausedTest;if(!p)return;
   S.pauseBusy=true;
-  S.set=p.set;S.q=p.q;S.ans=p.ans||blankArr();S.mark=p.mark||blankBool();S.state=p.state||blankState();S.date=p.date||todayISO();S.phase=p.phase||'first';S.bookmarkMode=!!p.bookmarkMode;S.bookmarkItems=p.bookmarkItems||[];S.pool=p.pool||[];S.qTimes=p.qTimes||blankArr().map(()=>0);S.testId=p.testId||null;S.qStartAt=Date.now();S.paletteVisible=!isPhoneDevice();S.seconds=Math.max(0,p.seconds||0);S.deadline=S.bookmarkMode?0:Date.now()+S.seconds*1000;S.autoSubmitting=false;D.pausedTest=null;
+  S.set=p.set;S.q=p.q;S.ans=p.ans||blankArr();S.mark=p.mark||blankBool();S.state=p.state||blankState();S.date=p.date||todayISO();S.phase=p.phase||'first';S.bookmarkMode=!!p.bookmarkMode;S.bookmarkItems=p.bookmarkItems||[];S.pool=p.pool||[];S.qTimes=p.qTimes||blankArr().map(()=>0);S.testId=p.testId||null;S.qStartAt=Date.now();S.paletteVisible=!isTouchDevice();S.seconds=Math.max(0,p.seconds||0);S.deadline=S.bookmarkMode?0:Date.now()+S.seconds*1000;S.autoSubmitting=false;D.pausedTest=null;
   if(S.testId&&!S.bookmarkMode){try{await rpc('mg_resume_test',{p_test_id:S.testId,p_remaining_seconds:S.seconds,p_position:S.q+1});}catch(e){console.error(e);S.pauseBusy=false;return alert('Could not resume the test: '+e.message)}}
   saveData();S.pauseBusy=false;S.screen='test';render(test());if(!S.bookmarkMode)startTimer(false);
 }
@@ -1123,15 +1126,8 @@ function render(content){
 }
 
 
-function setPaletteButtonState(isOpen){
-  const b=document.getElementById("paletteToggle");
-  if(!b) return;
-  b.classList.toggle("palette-open",!!isOpen);
-  b.classList.toggle("palette-closed",!isOpen);
-}
-
 function openMobilePalette(){
-  if(!isPhoneDevice()) return;
+  if(!isTouchDevice()) return;
   if(document.getElementById("paletteOverlay")) return;
   const overlay=document.createElement("div");
   overlay.id="paletteOverlay";
@@ -1144,8 +1140,7 @@ function openMobilePalette(){
     ${paletteHtml()}
   </div>`;
   document.body.appendChild(overlay);
-  setPaletteButtonState(true);
-  const close=()=>{overlay.remove();setPaletteButtonState(false);};
+  const close=()=>overlay.remove();
   overlay.addEventListener("click",e=>{
     if(e.target===overlay || e.target.closest(".palettePopup") || e.target.closest("#paletteClose")) close();
   });
@@ -1549,19 +1544,19 @@ $("resumePaused")?.addEventListener("click",resumePausedTest);
 $("bookmarks")?.addEventListener("click",()=>{S.screen="bookmarked";render(bookmarkedView())});
 $("homeBack")?.addEventListener("click",()=>{S.screen="home";render(home())});
 document.querySelectorAll("[data-bset]").forEach(b=>b.onclick=()=>{if(isDemoAccount()&&Number(b.dataset.bset)!==1)return alert("Demo Account: only Set 1 bookmarks are available.");S.set=+b.dataset.bset;S.q=+b.dataset.bq;S.screen="solutions";render(solutions())});
-$("attemptBookmarks")?.addEventListener("click",()=>{if(D.bookmarks.length){S.bookmarkMode=true;S.bookmarkItems=(isDemoAccount()?D.bookmarks.filter(x=>Number(x.set)===1):D.bookmarks).map(x=>x);S.q=0;S.ans=Array(S.bookmarkItems.length).fill(null);S.mark=Array(S.bookmarkItems.length).fill(false);S.state=Array(S.bookmarkItems.length).fill("new");S.qTimes=Array(S.bookmarkItems.length).fill(0);S.qStartAt=Date.now();S.pool=S.bookmarkItems.map(x=>x.q);S.paletteVisible=!isPhoneDevice();S.date=new Date().toISOString().slice(0,10);S.seconds=0;S.deadline=0;S.screen="test";render(test())}});
+$("attemptBookmarks")?.addEventListener("click",()=>{if(D.bookmarks.length){S.bookmarkMode=true;S.bookmarkItems=(isDemoAccount()?D.bookmarks.filter(x=>Number(x.set)===1):D.bookmarks).map(x=>x);S.q=0;S.ans=Array(S.bookmarkItems.length).fill(null);S.mark=Array(S.bookmarkItems.length).fill(false);S.state=Array(S.bookmarkItems.length).fill("new");S.qTimes=Array(S.bookmarkItems.length).fill(0);S.qStartAt=Date.now();S.pool=S.bookmarkItems.map(x=>x.q);S.paletteVisible=!isTouchDevice();S.date=new Date().toISOString().slice(0,10);S.seconds=0;S.deadline=0;S.screen="test";render(test())}});
 $("back")?.addEventListener("click",()=>{
   $("modal").innerHTML=pauseConfirmModal();
   $("pauseNo")?.addEventListener("click",()=>{$("modal").innerHTML=""});
   $("pauseYes")?.addEventListener("click",pauseCurrentTest);
 });
-$("paletteToggle")?.addEventListener("click",()=>{if(isPhoneDevice()){openMobilePalette()}else{S.paletteVisible=!S.paletteVisible;render(test())}});
+$("paletteToggle")?.addEventListener("click",()=>{if(isTouchDevice()){openMobilePalette()}else{S.paletteVisible=!S.paletteVisible;render(test())}});
 $("collapse")?.addEventListener("click",()=>{S.paletteVisible=false;render(test())});
 document.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>goToQuestion(+b.dataset.q));
-document.querySelectorAll("[data-opt]").forEach(b=>b.onclick=async()=>{S.ans[S.q]=+b.dataset.opt;S.state[S.q]="answered";if(isPhoneDevice()) S.paletteVisible=false;render(test());await syncAnswerRemote()});
+document.querySelectorAll("[data-opt]").forEach(b=>b.onclick=async()=>{S.ans[S.q]=+b.dataset.opt;S.state[S.q]="answered";S.paletteVisible=false;render(test());await syncAnswerRemote()});
 $("bookmark")?.addEventListener("click",async()=>{await toggleBookmark();render(S.screen==="solutions"?solutions():test())});
 $("solutionBookmark")?.addEventListener("click",async()=>{await toggleBookmark();render(solutions())});
-$("mark")?.addEventListener("click",()=>{recordQuestionTime();S.mark[S.q]=true;syncMarkRemote(true);if(S.ans[S.q]===null)S.state[S.q]="marked";else S.state[S.q]="answered";let totalQ=S.bookmarkMode?S.bookmarkItems.length:25;if(S.q<totalQ-1){S.q++;if(isPhoneDevice()) S.paletteVisible=false;S.qStartAt=Date.now();render(test())}else{submitNow(false)}});
+$("mark")?.addEventListener("click",()=>{recordQuestionTime();S.mark[S.q]=true;syncMarkRemote(true);if(S.ans[S.q]===null)S.state[S.q]="marked";else S.state[S.q]="answered";let totalQ=S.bookmarkMode?S.bookmarkItems.length:25;if(S.q<totalQ-1){S.q++;S.paletteVisible=false;S.qStartAt=Date.now();render(test())}else{submitNow(false)}});
 $("clear")?.addEventListener("click",async()=>{S.ans[S.q]=null;await syncAnswerRemote();if(S.mark[S.q])S.state[S.q]="marked";else if(S.state[S.q]==="answered")S.state[S.q]="visited";render(test())});
 $("prev")?.addEventListener("click",()=>{if(S.q>0)goToQuestion(S.q-1)});
 let totalQ=S.bookmarkMode?S.bookmarkItems.length:25;
@@ -1670,11 +1665,12 @@ async function submitNow(auto=false){
   S.submitBusy=false;
 }
 
+const TEST_DURATION_SECONDS=15*60;
 function startTimer(reset=true){
   clearInterval(window.timer);
-  if(reset || !Number.isFinite(S.deadline) || S.deadline<=Date.now()){
-    S.deadline=Date.now()+900000;
-    S.seconds=900;
+  if(reset || !Number.isFinite(S.deadline)){
+    S.deadline=Date.now()+TEST_DURATION_SECONDS*1000;
+    S.seconds=TEST_DURATION_SECONDS;
     S.lastTwoMinuteNotice=false;
   }else{
     S.seconds=Math.max(0,Math.ceil((S.deadline-Date.now())/1000));
@@ -1814,7 +1810,7 @@ async function boot(){
       showSplash(()=>{
         const lv=getLastView();
         if(lv&&lv.screen==='test'&&Number.isInteger(lv.set)&&Number.isInteger(lv.q)){
-          S.set=lv.set;S.q=lv.q;S.bookmarkMode=!!lv.bookmarkMode;S.ans=lv.ans||blankArr();S.mark=lv.mark||blankBool();S.state=lv.state||blankState();S.date=lv.date||todayISO();S.phase=lv.phase||'first';S.pool=lv.pool||[];S.bookmarkItems=lv.bookmarkItems||[];S.qTimes=lv.qTimes||blankArr().map(()=>0);S.qStartAt=Date.now();S.paletteVisible=!isPhoneDevice();S.seconds=Math.max(0,Number(lv.remaining)||0);S.deadline=S.bookmarkMode?0:Date.now()+S.seconds*1000;S.autoSubmitting=false;S.screen='test';render(test());if(!S.bookmarkMode)startTimer(false);
+          S.set=lv.set;S.q=lv.q;S.bookmarkMode=!!lv.bookmarkMode;S.ans=lv.ans||blankArr();S.mark=lv.mark||blankBool();S.state=lv.state||blankState();S.date=lv.date||todayISO();S.phase=lv.phase||'first';S.pool=lv.pool||[];S.bookmarkItems=lv.bookmarkItems||[];S.qTimes=lv.qTimes||blankArr().map(()=>0);S.qStartAt=Date.now();S.paletteVisible=!isTouchDevice();S.seconds=Math.max(0,Number(lv.remaining)||0);S.deadline=S.bookmarkMode?0:Date.now()+S.seconds*1000;S.autoSubmitting=false;S.screen='test';render(test());if(!S.bookmarkMode)startTimer(false);
         }else if(lv&&lv.screen==='solutions'&&Number.isInteger(lv.set)&&Number.isInteger(lv.q)){
           S.set=lv.set;S.q=lv.q;S.bookmarkMode=!!lv.bookmarkMode;S.ans=lv.ans||blankArr();S.mark=lv.mark||blankBool();S.state=lv.state||blankState();S.qTimes=lv.qTimes||blankArr().map(()=>0);S.bookmarkItems=lv.bookmarkItems||[];S.pool=lv.pool||[];S.screen='solutions';render(solutions());
         }else if(lv&&lv.screen==='bookmarked'){
