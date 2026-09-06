@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#eef5ff">
-<title>SSC Archives — Maths (Geometry) Dummy Test</title>
+<title>SSC Archives — Maths (Geometry)</title>
 <style>
 :root{--bg:#f3f7fc;--card:rgba(255,255,255,.78);--solid:#fff;--ink:#12213b;--muted:#667790;--line:rgba(104,135,174,.22);--blue:#1769e0;--cyan:#09a7d7;--green:#18a957;--orange:#f59e0b;--red:#e5484d;--shadow:0 18px 55px rgba(28,58,94,.11);--qsize:20px}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);scroll-behavior:auto;-webkit-overflow-scrolling:touch}
@@ -270,6 +270,7 @@ html{scroll-behavior:smooth}
 .authFooter{grid-template-columns:1fr 1fr;background:rgba(207,220,237,.62);box-shadow:0 7px 18px rgba(28,58,94,.07)}
 .authFooter a{background:rgba(255,255,255,.88);transition:background .15s ease,transform .15s ease}
 .authFooter a:hover{background:#fff;transform:translateY(-1px)}
+.releaseFooter{text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);line-height:1.55}.releaseLink{border:0;background:transparent;color:var(--blue);font-weight:850;padding:4px 6px;text-decoration:underline;text-underline-offset:2px}.releaseLink:hover{color:#0b55bd}
 @media(max-width:760px){.auth{border-radius:20px}.authHead{gap:10px}.authHow .howBtn{padding:8px 10px;font-size:11px}.howQ{width:27px;height:27px}.authFooter{grid-template-columns:1fr 1fr}.authFooter a{font-size:12px;padding:12px 7px}}
 
 </style>
@@ -542,6 +543,22 @@ function recoveryModal(){
  chooser();
 }
 
+function firstVerifiedReleaseModal(){
+ const m=$("modal");
+ m.innerHTML=`<div class="modal"><div class="modalbox glass" role="dialog" aria-modal="true" aria-labelledby="releaseTitle">
+ <div class="row between"><h2 id="releaseTitle">First Verified Release</h2><button class="btn" id="closeRelease">✕</button></div>
+ <p class="small" style="line-height:1.7;margin-top:12px">All major functions and security filters have been tested and verified for this release. However, this is the first production version, so unexpected errors or problems may still occur.</p>
+ <p class="small muted" style="line-height:1.7">If you find any issue, please report it through the official SSC Archives channel provided for support, so it can be reviewed and resolved.</p>
+ <button class="btn primary" id="closeRelease2" style="width:100%;margin-top:10px">Close</button>
+ </div></div>`;
+ const close=()=>m.innerHTML="";
+ $("closeRelease")?.addEventListener("click",close);$("closeRelease2")?.addEventListener("click",close);
+}
+
+function releaseFooter(){
+ return `<div class="releaseFooter small muted"><div><b>SSC Archives · Version 1.0.0 · © 2026 SSC Archives. All rights reserved.</b></div><div>Last updated: 7 September 2026</div><button type="button" class="releaseLink" id="firstVerifiedRelease">First Verified Release</button></div>`;
+}
+
 function howItWorksModal(){
  const m=$("modal");
  m.innerHTML=`<div class="modal"><div class="modalbox glass" role="dialog" aria-modal="true" aria-labelledby="howWorksTitle" style="max-height:92svh;overflow:auto">
@@ -609,7 +626,7 @@ function login(){
     <h2 style="margin-bottom:8px">Setup Steps</h2>
     <div class="authSteps"><div class="authStep"><span class="stepNo">1</span><div><b>Continue with Google</b><div class="small muted">Verify your Google account first.</div></div></div><div class="authStep"><span class="stepNo">2</span><div><b>Create your account details</b><div class="small muted">Enter Full Name, User ID and PIN.</div></div></div><div class="authStep"><span class="stepNo">3</span><div><b>Start Practicing</b><div class="small muted">Your account is ready after setup.</div></div></div></div>
    </section></div>
-   <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
+   <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>${releaseFooter()}
    </section></main>`;
  }
  if(googlePin){
@@ -622,7 +639,7 @@ function login(){
     <button class="btn primary" id="login" style="width:100%">Sign In</button>
     <p class="small muted authNote">Your User ID is verified from your account. You only need to enter your PIN.</p>
    </section>
-   <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
+   <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>${releaseFooter()}
    </section></main>`;
  }
  return `<main class="login"><section class="card glass auth">
@@ -642,7 +659,7 @@ function login(){
  <p class="small muted demoNote">Try Set 1 and its allowed revisions, scheduling, marks and analytics. Other areas remain locked.</p>
  <button class="btn demoBtn" id="demoCreate" type="button">Create Demo Account</button>
  <p class="small muted" style="margin:8px 0 0"><b>Live Demo Slots: 20</b></p></section>
- <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
+ <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>${releaseFooter()}
  </section></main>`;
 }
 
@@ -1303,6 +1320,7 @@ $("forgotAccessBtn")?.addEventListener("click",recoveryModal);
 
 $("howWorksBtn")?.addEventListener("click",howItWorksModal);
 $("howWorksBtn2")?.addEventListener("click",howItWorksModal);
+$("firstVerifiedRelease")?.addEventListener("click",firstVerifiedReleaseModal);
 $("profileHowTo")?.addEventListener("click",()=>showHowTo(true));
 
 $("demoCreate")?.addEventListener("click",async()=>{
