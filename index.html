@@ -452,6 +452,7 @@ const DATA_KEY="ssc_archives_data_mg125_v33";
 const LAST_SOLUTION_KEY="ssc_archives_last_solution_v1";
 const LAST_VIEW_KEY="ssc_archives_last_view_v1";
 const LOGOUT_KEY="ssc_archives_logged_out_v1";
+const DEMO_USED_KEY="ssc_archives_demo_used_v1";
 const $=id=>document.getElementById(id);
 const blankArr=()=>Array(25).fill(null);
 const blankBool=()=>Array(25).fill(false);
@@ -613,10 +614,10 @@ function login(){
    <h2>Sign In (Existing Users)</h2><p class="small muted">Your registered User ID is used with your PIN.</p>
    ${hasSaved?`<div class="field"><label>User ID</label><input id="uid" value="${escapeHtml(a?.user||"")}" readonly autocomplete="username"></div><div class="field"><label>PIN</label><input id="pin" inputmode="numeric" maxlength="6" placeholder="Enter your PIN" autocomplete="current-password"></div><button class="btn primary" id="login" style="width:100%">Sign In</button><p class="small muted authNote">Once registered, setup screens disappear. Your account User ID stays linked to your login.</p><button class="btn recoveryBtn" id="forgotAccessBtn" type="button">Forgot User ID / PIN?</button>`:`<div class="notice small">After Google verification, SSC Archives will either open account setup for a new user or automatically show the existing User ID and ask only for the PIN.</div><button class="btn recoveryBtn" id="forgotAccessBtn" type="button">Forgot User ID / PIN?</button>`}
  </section></div>
- <section class="demoCard"><div class="demoHead"><div><b>FOR DEMO USER</b><div class="small muted">No Google or email required.</div></div><span id="demoStatus" class="demoStatus">Total Demo Registrations: Checking…</span></div>
+ ${localStorage.getItem(DEMO_USED_KEY)==="1"?"":`<section class="demoCard"><div class="demoHead"><div><b>FOR DEMO USER</b><div class="small muted">No Google or email required.</div></div><span id="demoStatus" class="demoStatus">Total Demo Registrations: Checking…</span></div>
  <p class="small muted demoNote">Try Set 1 and its allowed revisions, scheduling, marks and analytics. Other areas remain locked.</p>
  <button class="btn demoBtn" id="demoCreate" type="button">Create Demo Account</button>
- <p class="small muted" style="margin:8px 0 0"><b>Live Demo Slots: 20</b></p></section>
+ <p class="small muted" style="margin:8px 0 0"><b>Live Demo Slots: 20</b></p></section>`}
  <div class="authFooter"><a href="./terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a><a href="./privacy.html" target="_blank" rel="noopener noreferrer">Privacy and Data</a></div>
  </section></main>`;
 }
@@ -1375,12 +1376,7 @@ $("login")?.addEventListener("click",async()=>{
  S.user=u;S.name=a?.name||u;S.pin=p;
  try{
    const cred=await authCredentialFor(u,p);
-   if(a?.accountType==="demo"){
-     const {error:demoAuthError}=await supabaseClient.auth.signInWithPassword({email:cred.email,password:cred.password});
-     if(demoAuthError)throw demoAuthError;
-     const result=await rpc("ssc_demo_login",{p_demo_code:u,p_pin_hash:await sha256Hex(p)});
-     if(result?.status!=="active")throw new Error("Demo account is not available for another login.");
-   }else if(!S.googlePinLogin){
+   if(!S.googlePinLogin){
      const loginEmail=await rpc("ssc_get_login_email",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
      if(!loginEmail){
        sessionStorage.setItem("SSC_PIN_BOOTSTRAP_PENDING",JSON.stringify({userCode:u}));
@@ -1446,7 +1442,18 @@ $("linkGoogle")?.addEventListener("click",async()=>{
     if(error)throw error;
   }catch(e){console.error(e);alert("Google linking failed: "+(e?.message||"Please try again."));}
 });
-$("signout")?.addEventListener("click",async()=>{localStorage.setItem(LOGOUT_KEY,"1");clearLastView();try{await supabaseClient.auth.signOut()}catch(e){console.warn(e)}S.unlocked=false;S.pin="";S.user="";S.name="";S.googleOnboarding=false;S.googlePinLogin=false;S.screen="login";S.authMode="signin";render(login())});
+$("signout")?.addEventListener("click",async()=>{
+ const wasDemo=isDemoAccount();
+ const demoCode=String(S.user||account()?.user||"").trim().toUpperCase();
+ if(wasDemo){
+   localStorage.setItem(DEMO_USED_KEY,"1");
+   if(demoCode){try{await rpc("ssc_end_demo_session",{p_demo_code:demoCode})}catch(e){console.warn("Demo end-session cleanup skipped:",e?.message||e)}}
+ }
+ localStorage.setItem(LOGOUT_KEY,"1");clearLastView();
+ try{await supabaseClient.auth.signOut()}catch(e){console.warn(e)}
+ S.unlocked=false;S.pin="";S.user="";S.name="";S.googleOnboarding=false;S.googlePinLogin=false;S.accountType="pin";S.authUid=null;S.googleEmail="";S.screen="login";S.authMode="signin";
+ render(login());
+});
 $("backupProgress")?.addEventListener("click",()=>{
  const payload={version:2,exportedAt:new Date().toISOString(),account:{user:S.user,name:S.name||""},data:D};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
