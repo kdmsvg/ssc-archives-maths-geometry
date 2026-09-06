@@ -566,7 +566,7 @@ function login(){
  <section class="authPanel" style="background:rgba(239,247,255,.82);border:1px solid #cfe4fa">
    <div class="authInfo"><b>For New Users, Create Your SSC Archives Account First</b><div class="small muted" style="margin-top:5px">First step: verify your Google account with <b>Continue with Google</b>.</div></div>
    <div class="accountLimit">Google accounts: ${showGoogle?"checking…":"30-user limit applies to new registrations"} </div>
-   ${showGoogle?`<button class="btn google" id="google">Continue with Google</button><p class="small muted authNote">Use Google on your first login, after a long gap, when your session has expired/refreshed, or after browser data is cleared.</p>`:`<div class="notice ok small"><b>Google verification is not needed right now.</b><br>Your active session is already recognized.</div>`}
+   ${showGoogle?`<button class="btn google" id="google" type="button">Continue with Google</button><p class="small muted authNote">Use Google on your first login, after a long gap, when your session has expired/refreshed, or after browser data is cleared.</p>`:`<div class="notice ok small"><b>Google verification is not needed right now.</b><br>Your active session is already recognized.</div>`}
    <div class="authSteps"><div class="authStep"><span class="stepNo">1</span><div><b>Continue with Google</b></div></div><div class="authStep"><span class="stepNo">2</span><div><b>Create User ID + PIN</b></div></div><div class="authStep"><span class="stepNo">3</span><div><b>Then sign in normally</b></div></div></div>
  </section>
  <section class="authPanel" style="background:rgba(239,249,242,.82);border:1px solid #c8e8d3">
@@ -1309,13 +1309,27 @@ $("login")?.addEventListener("click",async()=>{
  S.screen="home";saveAccount();localStorage.removeItem(LOGOUT_KEY);render(home());
 });
 
-$("google")?.addEventListener("click",async()=>{
+$("google")?.addEventListener("click",async(e)=>{
+ e.preventDefault(); e.stopPropagation();
+ const b=$("google"); if(!b||b.dataset.busy==="1") return;
+ b.dataset.busy="1"; b.disabled=true; b.textContent="Connecting to Google…";
  try{
    const session=(await supabaseClient.auth.getSession()).data.session;
    if(session?.user?.id) await supabaseClient.auth.signOut();
-   const {error}=await supabaseClient.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname,scopes:"openid email"}});
+   const redirectTo=window.location.origin+window.location.pathname;
+   const {data,error}=await supabaseClient.auth.signInWithOAuth({
+     provider:"google",
+     options:{redirectTo,scopes:"openid email",skipBrowserRedirect:true}
+   });
    if(error)throw error;
- }catch(e){console.error(e);alert("Google authentication failed: "+(e?.message||"Please try again."));}
+   if(!data?.url)throw new Error("Google sign-in URL was not returned.");
+   localStorage.setItem("SSC_GOOGLE_OAUTH_PENDING","1");
+   window.location.assign(data.url);
+ }catch(e){
+   console.error("Google authentication failed:",e);
+   b.dataset.busy="0"; b.disabled=false; b.textContent="Continue with Google";
+   alert("Google authentication failed: "+(e?.message||"Please try again."));
+ }
 });
 
 $("linkGoogle")?.addEventListener("click",async()=>{
@@ -1554,8 +1568,9 @@ async function boot(){
       return render(login());
     }
     let saved=account();
-    const oauthCallback=/(^|[#?&])(access_token|refresh_token|code)=/.test(window.location.hash+window.location.search);
+    const oauthCallback=/(^|[#?&])(access_token|refresh_token|code)=/.test(window.location.hash+window.location.search) || localStorage.getItem("SSC_GOOGLE_OAUTH_PENDING")==="1";
     if(session && oauthCallback && (session.user.app_metadata?.provider==="google" || session.user.identities?.some(i=>i.provider==="google"))){
+      localStorage.removeItem("SSC_GOOGLE_OAUTH_PENDING");
       const {data:existingProfile}=await supabaseClient.from("ssc_profiles").select("id,user_code,display_name").eq("id",session.user.id).maybeSingle();
       if(existingProfile?.id){
         S.user=existingProfile.user_code;S.name=existingProfile.display_name||"";
