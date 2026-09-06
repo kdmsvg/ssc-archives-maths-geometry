@@ -1354,7 +1354,19 @@ $("login")?.addEventListener("click",async()=>{
    const cred=await authCredentialFor(u,p);
    if(!S.googlePinLogin){
      const loginEmail=await rpc("ssc_get_login_email",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
-     if(!loginEmail) throw new Error("PIN login is not initialized for this account. Please complete one Google verification + PIN setup first.");
+     if(!loginEmail){
+       sessionStorage.setItem("SSC_PIN_BOOTSTRAP_PENDING",JSON.stringify({userCode:u}));
+       localStorage.setItem("SSC_GOOGLE_OAUTH_PENDING","1");
+       const redirectTo=window.location.origin+window.location.pathname;
+       const {data,error}=await supabaseClient.auth.signInWithOAuth({
+         provider:"google",
+         options:{redirectTo,scopes:"openid email",skipBrowserRedirect:true}
+       });
+       if(error)throw error;
+       if(!data?.url)throw new Error("Google sign-in URL was not returned.");
+       window.location.assign(data.url);
+       return;
+     }
      const {error}=await supabaseClient.auth.signInWithPassword({email:String(loginEmail).trim(),password:cred.password});
      if(error)throw error;
    }else{
@@ -1638,6 +1650,32 @@ async function boot(){
     let saved=account();
     const oauthCallback=/(^|[#?&])(access_token|refresh_token|code)=/.test(window.location.hash+window.location.search) || localStorage.getItem("SSC_GOOGLE_OAUTH_PENDING")==="1";
     const recoveryPendingRaw=localStorage.getItem("SSC_RECOVERY_PENDING");
+    const pinBootstrapPendingRaw=sessionStorage.getItem("SSC_PIN_BOOTSTRAP_PENDING");
+    if(session && oauthCallback && pinBootstrapPendingRaw && (session.user.app_metadata?.provider==="google" || session.user.identities?.some(i=>i.provider==="google"))){
+      try{
+        const bp=JSON.parse(pinBootstrapPendingRaw);
+        const pendingCode=String(bp?.userCode||"").trim().toUpperCase();
+        if(!pendingCode)throw new Error("Pending User ID is missing.");
+        const {data:profile}=await supabaseClient.from("ssc_profiles").select("id,user_code,display_name").eq("id",session.user.id).maybeSingle();
+        if(!profile?.id || String(profile.user_code||"").toUpperCase()!==pendingCode){
+          sessionStorage.removeItem("SSC_PIN_BOOTSTRAP_PENDING");
+          localStorage.removeItem("SSC_GOOGLE_OAUTH_PENDING");
+          throw new Error("This Google account is not linked to the requested User ID.");
+        }
+        sessionStorage.removeItem("SSC_PIN_BOOTSTRAP_PENDING");
+        localStorage.removeItem("SSC_GOOGLE_OAUTH_PENDING");
+        S.user=profile.user_code;S.name=profile.display_name||"";S.pin="";S.authUid=session.user.id;S.accountType="google";S.googleEmail=String(session.user.email||"");
+        saveAccount();
+        S.googleOnboarding=false;S.googlePinLogin=true;S.authMode="signin";
+        return render(login());
+      }catch(e){
+        sessionStorage.removeItem("SSC_PIN_BOOTSTRAP_PENDING");
+        localStorage.removeItem("SSC_GOOGLE_OAUTH_PENDING");
+        try{await supabaseClient.auth.signOut()}catch(_e){}
+        alert("Google verification failed: "+(e?.message||"Please try again."));
+        return render(login());
+      }
+    }
     if(session && oauthCallback && recoveryPendingRaw && (session.user.app_metadata?.provider==="google" || session.user.identities?.some(i=>i.provider==="google"))){
       try{
         const rp=JSON.parse(recoveryPendingRaw); localStorage.removeItem("SSC_RECOVERY_PENDING"); localStorage.removeItem("SSC_GOOGLE_OAUTH_PENDING");
