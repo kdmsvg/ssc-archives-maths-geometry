@@ -19,7 +19,7 @@ button,input,select{font:inherit}button{cursor:pointer}.hidden{display:none!impo
 h1{font-size:42px;line-height:1.04;letter-spacing:-1.5px;margin:7px 0 15px}h2{margin:0 0 10px}
 .notice{padding:13px 15px;border-radius:12px;background:rgba(239,247,255,.9);border:1px solid #d7e8fa}
 .notice.due{border-color:#f3c36a;background:#fff9ec}.notice.ok{border-color:#a9dfbf;background:#f1fbf5}
-.login{min-height:100vh;display:grid;place-items:center;padding:20px}.auth{width:min(470px,100%)}.field{display:grid;gap:6px;margin:13px 0}.field label{font-weight:750;font-size:13px}.field input,.field select{padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;outline:none}
+.login{min-height:100vh;display:grid;place-items:center;padding:20px}.auth{width:min(560px,100%)}.authTabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0 12px}.authTab{border:1px solid var(--line);background:rgba(255,255,255,.78);color:var(--muted);padding:11px 12px;border-radius:11px;font-weight:850}.authTab.active{background:#eef6ff;border-color:#8bbcf3;color:var(--blue)}.authSub{margin:-3px 0 14px}.authDivider{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:11px;margin:12px 0}.authDivider:before,.authDivider:after{content:"";height:1px;background:var(--line);flex:1}.demoCard{margin-top:18px;padding:15px;border-radius:14px;border:1px solid #c9b3f5;background:rgba(249,245,255,.82)}.demoHead{display:flex;align-items:center;justify-content:space-between;gap:10px}.demoBadge{font-size:10px;font-weight:900;letter-spacing:.7px;padding:5px 8px;border-radius:999px;background:#efe6ff;color:#6433a5}.demoStatus{font-size:12px;font-weight:800}.demoStatus.available{color:var(--green)}.demoStatus.unavailable{color:var(--red)}.demoBtn{width:100%;margin-top:10px;background:#fff;border:1px solid #bfa4ed;color:#5b21b6}.demoNote{margin:8px 0 0}.field{display:grid;gap:6px;margin:13px 0}.field label{font-weight:750;font-size:13px}.field input,.field select{padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;outline:none}
 .google{width:100%;margin-top:10px;background:#fff;border:1px solid var(--line)}
 .homegrid{display:grid;grid-template-columns:1fr 1.8fr;gap:18px}.sets{display:grid;gap:10px;margin-top:15px}.set{width:100%;text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.8);border-radius:12px;padding:15px}.set small{display:block;color:var(--muted);margin-top:3px}.set:hover{border-color:#75aef2}.set .row{justify-content:space-between}
 .notifs{display:grid;gap:9px;margin:12px 0 18px}.notif{padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#fff}.notif b{color:var(--red)}
@@ -470,17 +470,23 @@ function sizePx(){return [16,18,20,22,24][D.sizeStep+2]}
 function applySize(){document.documentElement.style.setProperty("--qsize",sizePx()+"px")}
 function sizeButtons(){return `<div class="sizebar"><span class="small muted sizeLabel">Text</span><span class="desktopSizes">${[-2,-1,0,1,2].map(n=>`<button class="btn ${D.sizeStep===n?"active":""}" data-size="${n}">${n===0?"Current":n<0?"−"+Math.abs(n):"＋"+n}</button>`).join("")}</span><span class="mobileSizes"><button class="btn" data-size-dec aria-label="Decrease text size">−</button><button class="btn" data-size-inc aria-label="Increase text size">＋</button></span></div>`}
 function bindSize(){document.querySelectorAll("[data-size]").forEach(b=>b.onclick=()=>{D.sizeStep=+b.dataset.size;saveData();applySize();render(S.screen==="test"?test():S.screen==="solutions"?solutions():home())});$("sizebar");document.querySelectorAll("[data-size-dec]").forEach(b=>b.onclick=()=>{D.sizeStep=Math.max(-2,D.sizeStep-1);saveData();applySize();render(S.screen==="test"?test():S.screen==="solutions"?solutions():home())});document.querySelectorAll("[data-size-inc]").forEach(b=>b.onclick=()=>{D.sizeStep=Math.min(2,D.sizeStep+1);saveData();applySize();render(S.screen==="test"?test():S.screen==="solutions"?solutions():home())})}
-function authHeading(){return account()?"Welcome Back":"Welcome"}
+function authHeading(){const mode=S.authMode|| (account()?"signin":"signup"); return mode==="signin"?"Sign In":"Sign Up"}
 function login(){
+const a=account(), mode=S.authMode|| (a?"signin":"signup"), isSignIn=mode==="signin";
 return `<main class="login"><section class="card glass auth">
 <div class="tag">SSC ARCHIVES · MATHS (GEOMETRY)</div>
-<h1>${authHeading()}</h1><p class="muted">${account()?"Login to continue your practice.":"Create your account to start your journey."}</p>
-<div class="field"><label>User ID</label><input id="uid" placeholder="Alphanumeric User ID"></div>
-${!account()?`<div class="field"><label>Name / Display Name</label><input id="displayName" maxlength="80" placeholder="Enter your name"></div>`:""}
-<div class="field"><label>PIN</label><input id="pin" inputmode="numeric" maxlength="6" placeholder="4 or 6 digits"></div>
-<button class="btn primary" id="login" style="width:100%">${account()?"Login":"Create Account"}</button>
+<h1>${isSignIn?"Sign In":"Sign Up"}</h1>
+<div class="authTabs"><button class="authTab ${!isSignIn?"active":""}" id="authSignUp" type="button">SIGN UP</button><button class="authTab ${isSignIn?"active":""}" id="authSignIn" type="button">SIGN IN</button></div>
+<p class="small muted authSub">${isSignIn?"For already registered users.":"For new users — create your SSC Archives account."}</p>
 <button class="btn google" id="google">Continue with Google</button>
-<p class="small muted">Sign in securely with your Google account.</p>
+<p class="small muted">${isSignIn?"Continue with Google for an existing registered account.":"Continue with Google to verify and create a new account."}</p>
+<div class="authDivider">OR</div>
+${isSignIn?`<div class="field"><label>User ID</label><input id="uid" value="${escapeHtml(a?.user||"")}" placeholder="Your User ID" ${a?"readonly":""} autocomplete="username"></div>`:`<div class="field"><label>Full Name</label><input id="displayName" maxlength="80" placeholder="Enter your name" autocomplete="name"></div>
+<div class="field"><label>Choose a Unique User ID</label><input id="uid" placeholder="4–30 letters, numbers, _ or -" autocomplete="username"></div>
+<div id="uidAvailability" class="small muted" aria-live="polite">Live check: enter a User ID.</div>`}
+<div class="field"><label>PIN</label><input id="pin" inputmode="numeric" maxlength="6" placeholder="4 or 6 digits" autocomplete="current-password"></div>
+<button class="btn primary" id="login" style="width:100%">${isSignIn?"Sign In":"Create Account"}</button>
+<section class="demoCard"><div class="demoHead"><div><b>FREE DEMO USER</b><div class="small muted">No Google or email required.</div></div><span id="demoStatus" class="demoStatus">Availability: Checking…</span></div><p class="small muted demoNote">Try Set 1 and its allowed revisions, scheduling, marks and analytics. Other areas remain locked.</p><button class="btn demoBtn" id="demoCreate" type="button">Create Free Demo Account</button><p class="small muted" style="margin-bottom:0">Currently allowing <b>20 demo users</b> at a time.</p></section>
 </section></main>`;
 }
 function notifications(){
@@ -1074,20 +1080,63 @@ function bindReattempt(){
  t.onclick=()=>{on=!on;paint()};
 }
 
+
+async function checkUserIdAvailability(){
+  const input=$("uid"), box=$("uidAvailability");
+  if(!input||!box||account()) return true;
+  const u=input.value.trim().toUpperCase();
+  if(!/^[A-Za-z0-9_-]{4,30}$/.test(u)){
+    box.textContent="Use 4–30 letters, numbers, _ or -.";
+    box.className="small muted";
+    return false;
+  }
+  box.textContent="Checking availability…";
+  box.className="small muted";
+  try{
+    const {data,error}=await supabaseClient.rpc("ssc_check_user_code_available",{p_user_code:u});
+    if(error) throw error;
+    const available=!!data;
+    box.textContent=available?"✓ User ID is available.":"✕ User ID is already in use. Choose another.";
+    box.className=available?"small":"small";
+    box.dataset.available=available?"1":"0";
+    return available;
+  }catch(e){
+    console.error("User ID availability check failed:",e);
+    box.textContent="Could not verify User ID availability. Please try again.";
+    box.className="small muted";
+    box.dataset.available="0";
+    return false;
+  }
+}
+
 function bind(){
 applySize();bindSize();bindProgressCarousels();bindHomeScroll();
+$("authSignUp")?.addEventListener("click",()=>{S.authMode="signup";render(login())});
+$("authSignIn")?.addEventListener("click",()=>{S.authMode="signin";render(login())});
+$("demoCreate")?.addEventListener("click",()=>alert("Demo account backend will be connected in the next implementation step. The UI is ready for the live 20-user availability check."));
+if(!account()&&$("uid")){
+  let uidTimer=null;
+  $("uid").addEventListener("input",()=>{
+    clearTimeout(uidTimer);
+    $("uid").dataset.availability="pending";
+    uidTimer=setTimeout(()=>checkUserIdAvailability(),350);
+  });
+  if($("uid").value.trim()) checkUserIdAvailability();
+}
 if(S.screen==="leaderboard")bindLeaderboardCarousel();
 $("login")?.addEventListener("click",async()=>{
-let u=$("uid").value.trim().toUpperCase(),p=$("pin").value.trim(),a=account(),name=$("displayName")?.value.trim()||a?.name||"";
+let u=$("uid").value.trim().toUpperCase(),p=$("pin").value.trim(),a=account(),mode=S.authMode|| (a?"signin":"signup"),name=$("displayName")?.value.trim()||a?.name||"";
 if(!/^[A-Za-z0-9_-]{4,30}$/.test(u))return alert("User ID: use 4–30 letters, numbers, _ or -.");
 if(!/^(\d{4}|\d{6})$/.test(p))return alert("PIN must be exactly 4 or 6 digits.");
 if(a&&a.user!==u)return alert("Use the registered User ID for this account.");
-const first=!a;
+const first=mode!=="signin";
 if(first&&!name)return alert("Please enter your name.");
 S.user=u; S.name=name; S.pin=p;
 try{
   const cred=await authCredentialFor(u,p);
   if(first){
+    const available=await checkUserIdAvailability();
+    if(!available) return alert("Please choose a unique User ID that is available.");
     const {data,error}=await supabaseClient.auth.signUp({email:cred.email,password:cred.password});
     if(error)throw error;
     if(!data.session)throw new Error("Email confirmation is enabled. Disable it for the User ID + PIN authentication flow.");
@@ -1123,7 +1172,7 @@ $("linkGoogle")?.addEventListener("click",async()=>{
     if(error)throw error;
   }catch(e){console.error(e);alert("Google linking failed: "+(e?.message||"Please try again."));}
 });
-$("signout")?.addEventListener("click",async()=>{localStorage.setItem(LOGOUT_KEY,"1");clearLastView();try{await supabaseClient.auth.signOut()}catch(e){console.warn(e)}S.unlocked=false;S.pin="";S.user="";S.name="";S.screen="login";render(login())});
+$("signout")?.addEventListener("click",async()=>{localStorage.setItem(LOGOUT_KEY,"1");clearLastView();try{await supabaseClient.auth.signOut()}catch(e){console.warn(e)}S.unlocked=false;S.pin="";S.user="";S.name="";S.screen="login";S.authMode="signin";render(login())});
 $("backupProgress")?.addEventListener("click",()=>{
  const payload={version:2,exportedAt:new Date().toISOString(),account:{user:S.user,name:S.name||""},data:D};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -1377,7 +1426,7 @@ async function boot(){
           S.screen='bookmarked';render(bookmarkedView());
         }else render(home());
       });
-    }else render(login());
+    }else { S.authMode=account()?"signin":"signup"; render(login()); }
   }catch(err){
     document.getElementById("app").innerHTML='<main class="login"><section class="card glass auth"><div class="tag">DATABASE ERROR</div><h1>Database could not be loaded</h1><p class="muted">Check the Supabase connection and ensure the required MG 125 tables/RPCs are deployed.</p></section></main>';
     console.error('SSC Archives boot failed:', err?.message||err);
