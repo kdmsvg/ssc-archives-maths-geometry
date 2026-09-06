@@ -561,6 +561,18 @@ function howItWorksModal(){
 }
 
 function login(){
+  const consumedRaw=localStorage.getItem("SSC_DEMO_CONSUMED");
+  let consumed=null;
+  try{consumed=JSON.parse(consumedRaw||"null")}catch(e){}
+  const savedAccount=account();
+  if(consumed?.user && String(savedAccount?.user||"").toUpperCase()===String(consumed.user).toUpperCase()){
+   return `<main class="login"><section class="card glass auth">
+   <div class="authHead"><div><div class="authBrand">SSC ARCHIVES · MATHS (GEOMETRY)</div><h1>Demo Expired</h1><p class="muted">This Demo account has already used its one-time login.</p></div></div>
+   <section class="authPanel" style="margin-top:16px;background:rgba(249,245,255,.82);border:1px solid #c9b3f5">
+    <div class="notice small"><b>Demo access ended</b><br>This Demo account cannot be logged in again. Google authentication is not available for Demo accounts.</div>
+    <button class="btn primary" id="demoExpiredClose" style="width:100%;margin-top:12px">Back to Sign In</button>
+   </section></section></main>`;
+  }
  const a=account();
  if(a?.accountType==='demo'){
   return `<main class="login"><section class="card glass auth">
@@ -1380,6 +1392,14 @@ $("cancelGoogleSignup")?.addEventListener("click",async()=>{
   render(login());
 });
 
+$("demoExpiredClose")?.addEventListener("click",()=>{
+  localStorage.removeItem("SSC_DEMO_CONSUMED");
+  localStorage.removeItem(KEY);
+  localStorage.removeItem(DATA_KEY);
+  S={screen:"login",user:"",name:"",pin:"",set:1,q:0,ans:blankArr(),mark:blankBool(),date:"",seconds:900,deadline:0,phase:"first",bookmarkMode:false,bookmarkItems:[],state:blankState(),paletteVisible:true,autoSubmitting:false,submitBusy:false,pauseBusy:false,qTimes:blankArr().map(()=>0),qStartAt:0,authMode:"signin",googleOnboarding:false,googlePinLogin:false,googleEmail:"",accountType:"pin"};
+  render(login());
+});
+
 $("demoExit")?.addEventListener("click",async()=>{
  localStorage.removeItem(KEY); localStorage.removeItem(DATA_KEY); clearLastView();
  try{await supabaseClient.auth.signOut()}catch(e){}
@@ -1483,9 +1503,24 @@ $("linkGoogle")?.addEventListener("click",async()=>{
 $("signout")?.addEventListener("click",async()=>{
  localStorage.setItem(LOGOUT_KEY,"1");clearLastView();
  const wasDemo=isDemoAccount(),demoCode=S.user;
- if(wasDemo&&demoCode){try{await rpc("ssc_end_demo_session",{p_demo_code:demoCode});}catch(e){console.warn("Demo session end failed:",e)}}
- try{await supabaseClient.auth.signOut()}catch(e){console.warn(e)}
- S.unlocked=false;S.pin="";S.user="";S.name="";S.googleOnboarding=false;S.googlePinLogin=false;S.screen="login";S.authMode="signin";render(login())
+ if(wasDemo&&demoCode){
+   try{
+     await rpc("ssc_end_demo_session",{p_demo_code:demoCode});
+   }catch(e){
+     localStorage.removeItem(LOGOUT_KEY);
+     alert("Demo logout could not be completed. The Demo session was kept active.");
+     console.error("Demo session end failed:",e);
+     return;
+   }
+ }
+ try{await supabaseClient.auth.signOut()}catch(e){
+   console.error(e);
+   if(wasDemo)alert("Demo session ended. Please refresh the page.");
+ }
+ if(wasDemo&&demoCode){
+   localStorage.setItem("SSC_DEMO_CONSUMED",JSON.stringify({user:demoCode,at:new Date().toISOString()}));
+ }
+ S.unlocked=false;S.pin="";S.user="";S.name="";S.authUid=null;S.googleOnboarding=false;S.googlePinLogin=false;S.screen="login";S.authMode="signin";render(login())
 });
 $("backupProgress")?.addEventListener("click",()=>{
  const payload={version:2,exportedAt:new Date().toISOString(),account:{user:S.user,name:S.name||""},data:D};
