@@ -1352,16 +1352,17 @@ $("login")?.addEventListener("click",async()=>{
  S.user=u;S.name=a?.name||u;S.pin=p;
  try{
    const cred=await authCredentialFor(u,p);
-   if(S.googlePinLogin){
+   if(!S.googlePinLogin){
+     const loginEmail=await rpc("ssc_get_login_email",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
+     if(!loginEmail) throw new Error("Invalid user or PIN.");
+     const {error}=await supabaseClient.auth.signInWithPassword({email:String(loginEmail).trim(),password:cred.password});
+     if(error)throw error;
+   }else{
      const pinCheck=await rpc("ssc_verify_my_pin",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
      if(pinCheck?.valid!==true && pinCheck?.needs_setup!==true)throw new Error("Invalid PIN.");
      const {error:pinAuthError}=await supabaseClient.auth.updateUser({password:cred.password});
      if(pinAuthError)throw new Error("PIN login setup failed: "+pinAuthError.message);
      if(pinCheck?.needs_setup===true) await rpc("ssc_set_my_pin_hash",{p_pin_hash:await sha256Hex(p)});
-   }else{
-     const loginEmail=(a?.accountType==="google"&&a?.googleEmail)?String(a.googleEmail).trim():cred.email;
-     const {error}=await supabaseClient.auth.signInWithPassword({email:loginEmail,password:cred.password});
-     if(error)throw error;
    }
    if(a?.accountType==="demo"){
      const result=await rpc("ssc_demo_login",{p_demo_code:u,p_pin_hash:await sha256Hex(p)});
