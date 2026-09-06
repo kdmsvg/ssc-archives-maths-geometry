@@ -551,7 +551,7 @@ function howItWorksModal(){
  <p><b>Already registered:</b> After Google verification, SSC Archives matches your Google identity with your existing account. Your registered <b>User ID is brought automatically</b>; you only enter your PIN. You do not create the account again.</p>
  <p><b>Normal next login:</b> When the account session is already active, the Google button and setup screens are not shown. You use your registered User ID and PIN.</p>
  <p><b>When Google may be shown again:</b> first login, a long gap with an expired session, a refreshed/expired session, a cleared browser, or a new browser/device where the saved account session is unavailable.</p>
- <p><b>Free Demo:</b> The server creates a unique Demo User ID and temporary 6-digit PIN. Up to 20 demo accounts are active at one time and each demo allows a maximum of 2 logins.</p>
+ <p><b>Free Demo:</b> The server creates a unique Demo User ID and temporary 6-digit PIN. Up to 20 demo accounts are active at one time and each demo allows one login only.</p>
  <p><b>Data & tests:</b> Account identity, progress, bookmarks and test data are handled through the enabled SSC Archives/Supabase setup. Each test has 25 questions and a 15-minute timer.</p>
  </div>
  <button class="btn primary" id="closeHowWorks2" style="width:100%;margin-top:12px">Close</button>
@@ -1293,7 +1293,7 @@ $("demoCreate")?.addEventListener("click",async()=>{
       const d=await rpc("ssc_create_demo_account",{p_browser_token:browserToken});
       if(!d?.available){
         if(d?.reason==="BROWSER_ALREADY_HAS_DEMO") throw new Error("This browser already has an active Demo Account.");
-        throw new Error("Demo availability changed. Please try again.");
+        throw new Error("Demo account could not be created. Please try again.");
       }
       const code=String(d.demo_code||"").toUpperCase(), pin=String(d.demo_pin||"");
       if(!code||!/^[\d]{6}$/.test(pin)) throw new Error("The demo account could not be generated safely.");
@@ -1306,7 +1306,7 @@ $("demoCreate")?.addEventListener("click",async()=>{
       if(claimed?.status!=="active")throw new Error("Demo account claim failed.");
       S.user=code;S.name=code;S.pin=pin;S.accountType="demo";S.authUid=data.user?.id||null;S.googleEmail="";
       saveAccount();localStorage.removeItem(LOGOUT_KEY);
-      alert(`Demo account created.\n\nUser ID: ${code}\nPIN: ${pin}\n\nKeep these credentials safe. This demo allows up to 2 logins.`);
+      alert(`Demo account created.\n\nUser ID: ${code}\nPIN: ${pin}\n\nKeep these credentials safe. This demo allows one login only.`);
       S.screen="home";showSplash(()=>{render(home());showHowTo()});
     }catch(e){
       console.error("Demo creation failed:",e);
