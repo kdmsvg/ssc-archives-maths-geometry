@@ -1435,19 +1435,16 @@ $("login")?.addEventListener("click",async()=>{
       }
       S.accountType="demo";
    }else if(!S.googlePinLogin){
-     const loginEmail=await rpc("ssc_get_login_email",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
+     /* Returning Google-linked users use their already-verified Google email + PIN.
+        Google OAuth is only for explicit first-time/re-verification flows, never for a normal logout/login. */
+     let loginEmail="";
+     if(String(a?.accountType||"").toLowerCase()==="google" && a?.googleEmail){
+       loginEmail=String(a.googleEmail).trim();
+     }else{
+       loginEmail=await rpc("ssc_get_login_email",{p_user_code:u,p_pin_hash:await sha256Hex(p)});
+     }
      if(!loginEmail){
-       sessionStorage.setItem("SSC_PIN_BOOTSTRAP_PENDING",JSON.stringify({userCode:u}));
-       localStorage.setItem("SSC_GOOGLE_OAUTH_PENDING","1");
-       const redirectTo=window.location.origin+window.location.pathname;
-       const {data,error}=await supabaseClient.auth.signInWithOAuth({
-         provider:"google",
-         options:{redirectTo,scopes:"openid email",skipBrowserRedirect:true}
-       });
-       if(error)throw error;
-       if(!data?.url)throw new Error("Google sign-in URL was not returned.");
-       window.location.assign(data.url);
-       return;
+       throw new Error("Account login record is unavailable. Please use Google verification only if this is a new browser/device or your Google session has expired.");
      }
      const {error}=await supabaseClient.auth.signInWithPassword({email:String(loginEmail).trim(),password:cred.password});
      if(error)throw error;
