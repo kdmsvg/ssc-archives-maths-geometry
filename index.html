@@ -981,8 +981,8 @@ function currentRecord(){const item=activeItem();return QUESTIONS[item.q]?.[4]||
 function test(){
 let item=activeItem(), q=QUESTIONS[item.q], total=S.bookmarkMode?S.bookmarkItems.length:25;
 let title=S.bookmarkMode?"Bookmarked Questions":`Maths (Geometry) — Set ${S.set}`;
-let palette=isTouchDevice()?false:S.paletteVisible;
-return `<header class="top testTop"><div class="topin"><button class="btn" id="back">← <span class="backFull">Back</span><span class="backShort">Back</span></button><div class="testHeadTitle"><b class="desktopTestTitle">${title}</b><b class="mobileTestTitle">${S.bookmarkMode?"Bookmarked":"Set "+item.set}</b><div class="small muted desktopSetLine">Set ${item.set}</div></div><div class="testHeadTools">${sizeButtons()}<button class="btn" id="paletteToggle">Palette</button><div class="timer testTimer ${S.seconds<=120?"low":""}" id="timer">${S.bookmarkMode?"00:00":fmt(S.seconds)}</div><button class="btn danger" id="submit">Submit Test</button></div></div></header>
+let palette=!!S.paletteVisible;
+return `<header class="top testTop"><div class="topin"><button class="btn" id="back">← <span class="backFull">Back</span><span class="backShort">Back</span></button><div class="testHeadTitle"><b class="desktopTestTitle">${title}</b><b class="mobileTestTitle">${S.bookmarkMode?"Bookmarked":"Set "+item.set}</b><div class="small muted desktopSetLine">Set ${item.set}</div></div><div class="testHeadTools">${sizeButtons()}<button type="button" class="btn" id="paletteToggle">Palette</button><div class="timer testTimer ${S.seconds<=120?"low":""}" id="timer">${S.bookmarkMode?"00:00":fmt(S.seconds)}</div><button class="btn danger" id="submit">Submit Test</button></div></div></header>
 <main class="wrap"><div class="test ${palette?"":"palette-hidden"}"><section class="card glass"><div class="testbar"><div><b>${title}</b><div class="small muted">${S.bookmarkMode?"Saved questions only":"English · Question "+(S.q+1)+" / 25"} · Test Date: ${S.date}</div></div><span class="small muted">${S.ans.filter(x=>x!==null).length}/${total} Answered</span></div>
 <div class="progress"><i style="width:${((S.q+1)/total)*100}%"></i></div>
 <div class="row between"><span class="small muted">Question ${S.q+1} / ${total}${S.bookmarkMode?` · Set ${item.set}`:""}</span><button class="btn bookmark" id="bookmark">${isBookmarked(item.set,item.q)?"★ Bookmarked":"☆ Bookmark"}</button></div>
@@ -1135,7 +1135,7 @@ function openMobilePalette(){
   document.body.appendChild(overlay);
   const close=()=>overlay.remove();
   overlay.addEventListener("click",e=>{
-    if(e.target===overlay || e.target.closest(".palettePopup") || e.target.closest("#paletteClose")) close();
+    if(e.target===overlay || e.target.closest("#paletteClose")) close();
   });
   overlay.querySelectorAll("[data-q]").forEach(b=>b.onclick=e=>{
     e.stopPropagation();
@@ -1565,7 +1565,11 @@ $("back")?.addEventListener("click",()=>{
   $("pauseNo")?.addEventListener("click",()=>{$("modal").innerHTML=""});
   $("pauseYes")?.addEventListener("click",pauseCurrentTest);
 });
-$("paletteToggle")?.addEventListener("click",()=>{if(isTouchDevice()){openMobilePalette()}else{S.paletteVisible=!S.paletteVisible;render(test())}});
+$("paletteToggle")?.addEventListener("click",e=>{
+  e.preventDefault(); e.stopPropagation();
+  S.paletteVisible=!S.paletteVisible;
+  render(test());
+});
 $("collapse")?.addEventListener("click",()=>{S.paletteVisible=false;render(test())});
 document.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>goToQuestion(+b.dataset.q));
 document.querySelectorAll("[data-opt]").forEach(b=>b.onclick=async()=>{S.ans[S.q]=+b.dataset.opt;S.state[S.q]="answered";S.paletteVisible=false;render(test());await syncAnswerRemote()});
